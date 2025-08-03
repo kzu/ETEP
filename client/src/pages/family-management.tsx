@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Shield, User, Trash2, Crown } from "lucide-react";
+import { Users, UserPlus, Shield, User, Trash2, Crown, Clock } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -57,6 +57,12 @@ export default function FamilyManagement() {
   const { data: familyData, isLoading } = useQuery({
     queryKey: ['/api/family'],
     select: (data) => data as { family: Family; members: FamilyMember[] }
+  });
+
+  // Fetch pending invitations sent from this family
+  const { data: pendingInvitations, isLoading: invitationsLoading } = useQuery({
+    queryKey: ['/api/family/invitations/pending'],
+    select: (data) => data as any[]
   });
 
   // Send invitation mutation
@@ -116,6 +122,26 @@ export default function FamilyManagement() {
       toast({
         title: "Error",
         description: error.message || "No se pudo actualizar el rol",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Cancel invitation mutation
+  const cancelInvitationMutation = useMutation({
+    mutationFn: async (invitationId: string) =>
+      apiRequest('DELETE', `/api/family/invitations/${invitationId}`),
+    onSuccess: () => {
+      toast({
+        title: "Invitación cancelada",
+        description: "La invitación ha sido cancelada."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/family/invitations/pending'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo cancelar la invitación",
         variant: "destructive"
       });
     }
@@ -254,6 +280,56 @@ export default function FamilyManagement() {
               {inviteMutation.isPending ? "Enviando..." : "Enviar Invitación"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Pending Invitations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Invitaciones Pendientes
+          </CardTitle>
+          <CardDescription>
+            Invitaciones enviadas que aún no han sido aceptadas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {invitationsLoading ? (
+            <div className="space-y-2">
+              <div className="h-4 bg-muted rounded animate-pulse" />
+              <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+            </div>
+          ) : !pendingInvitations || pendingInvitations.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">
+              No hay invitaciones pendientes
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {pendingInvitations.map((invitation: any) => (
+                <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{invitation.inviteeEmail}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Rol: {invitation.inviteeRole === 'parent' ? 'Padre' : 'Hijo'} 
+                      {invitation.inviteeRole === 'parent' && invitation.parentRole && ` (${invitation.parentRole === 'admin' ? 'Administrador' : 'Colaborador'})`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Enviada por: {invitation.invitedBy?.firstName || invitation.invitedBy?.email}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cancelInvitationMutation.mutate(invitation.id)}
+                    disabled={cancelInvitationMutation.isPending}
+                  >
+                    {cancelInvitationMutation.isPending ? "Cancelando..." : "Cancelar"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

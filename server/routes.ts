@@ -656,6 +656,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/family/invitations/pending', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const family = await storage.getFamilyByUserId(userId);
+      
+      if (!family) {
+        return res.status(404).json({ message: "User is not part of any family" });
+      }
+
+      const pendingInvitations = await storage.getPendingFamilyInvitations(family.id);
+      res.json(pendingInvitations);
+    } catch (error) {
+      console.error("Error fetching pending invitations:", error);
+      res.status(500).json({ message: "Failed to fetch pending invitations" });
+    }
+  });
+
+  app.delete('/api/family/invitations/:invitationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { invitationId } = req.params;
+      
+      // Check if user has permission to cancel this invitation
+      const invitation = await storage.getInvitationById(invitationId);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      const userRole = await storage.getUserFamilyRole(userId);
+      if (invitation.invitedByUserId !== userId && userRole !== 'admin') {
+        return res.status(403).json({ message: "Only the invitation sender or admins can cancel invitations" });
+      }
+
+      await storage.cancelInvitation(invitationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error canceling invitation:", error);
+      res.status(500).json({ message: "Failed to cancel invitation" });
+    }
+  });
+
   app.delete('/api/family/members/:memberId', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

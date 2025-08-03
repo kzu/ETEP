@@ -84,6 +84,9 @@ export interface IStorage {
   createFamilyInvitation(familyId: string, invitedByUserId: string, inviteeEmail: string, inviteeRole: string): Promise<FamilyInvitation>;
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
+  getPendingFamilyInvitations(familyId: string): Promise<FamilyInvitation[]>;
+  getUserFamilyRole(userId: string): Promise<string | null>;
+  cancelInvitation(invitationId: string): Promise<void>;
   acceptInvitation(invitationId: string, userId: string): Promise<void>;
   rejectInvitation(invitationId: string): Promise<void>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -451,6 +454,32 @@ export class DatabaseStorage implements IStorage {
       }
     });
     return invitation;
+  }
+
+  async getPendingFamilyInvitations(familyId: string): Promise<FamilyInvitation[]> {
+    return await db.query.familyInvitations.findMany({
+      where: and(
+        eq(familyInvitations.familyId, familyId),
+        eq(familyInvitations.status, "pending")
+      ),
+      with: {
+        invitedBy: true
+      },
+      orderBy: desc(familyInvitations.createdAt)
+    });
+  }
+
+  async getUserFamilyRole(userId: string): Promise<string | null> {
+    const membership = await db.query.familyMemberships.findFirst({
+      where: eq(familyMemberships.userId, userId)
+    });
+    return membership?.role || null;
+  }
+
+  async cancelInvitation(invitationId: string): Promise<void> {
+    await db.update(familyInvitations)
+      .set({ status: "cancelled" })
+      .where(eq(familyInvitations.id, invitationId));
   }
 
   async acceptInvitation(invitationId: string, userId: string): Promise<void> {
