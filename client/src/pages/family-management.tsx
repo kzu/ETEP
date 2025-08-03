@@ -293,8 +293,8 @@ export default function FamilyManagement() {
         </CardHeader>
       </Card>
 
-      {/* Invite New Member - Only for Admins */}
-      {userRole === 'admin' && (
+      {/* Invite New Member - For Admins and Collaborators */}
+      {(userRole === 'admin' || userRole === 'collaborator') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -326,7 +326,9 @@ export default function FamilyManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Administrador</SelectItem>
+                      {userRole === 'admin' && (
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      )}
                       <SelectItem value="collaborator">Colaborador</SelectItem>
                       <SelectItem value="child">Hijo/a</SelectItem>
                     </SelectContent>
@@ -344,8 +346,8 @@ export default function FamilyManagement() {
         </Card>
       )}
 
-      {/* Pending Invitations - Only for Admins */}
-      {userRole === 'admin' && (
+      {/* Pending Invitations - For Admins and Collaborators */}
+      {(userRole === 'admin' || userRole === 'collaborator') && (
         <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
