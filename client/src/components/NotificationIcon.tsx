@@ -88,6 +88,7 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'notification') {
+        console.log('Received notification:', data.data);
         // Refetch notifications when new one arrives
         refetch();
         
@@ -104,6 +105,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
         // If it's a task approved notification, refresh user balance
         if (data.data?.type === 'task_approved') {
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
+        
+        // If it's a family invitation notification, refresh family invitations
+        if (data.data?.type === 'family_invitation') {
+          queryClient.invalidateQueries({ queryKey: ["/api/family-invitations"] });
         }
       }
     };

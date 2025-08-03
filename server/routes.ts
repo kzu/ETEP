@@ -18,6 +18,8 @@ async function getUserFamilyId(userId: string): Promise<string | null> {
 // Helper function to broadcast notification to user
 function broadcastNotificationToUser(userId: string, notification: any) {
   const connections = userConnections.get(userId);
+  console.log(`Broadcasting notification to user ${userId}: found ${connections?.length || 0} connections`);
+  console.log(`Notification data:`, notification);
   if (connections) {
     const message = JSON.stringify({
       type: 'notification',
@@ -25,9 +27,12 @@ function broadcastNotificationToUser(userId: string, notification: any) {
     });
     connections.forEach(ws => {
       if (ws.readyState === WebSocket.OPEN) {
+        console.log(`Sending notification to WebSocket connection`);
         ws.send(message);
       }
     });
+  } else {
+    console.log(`No WebSocket connections found for user ${userId}`);
   }
 }
 
