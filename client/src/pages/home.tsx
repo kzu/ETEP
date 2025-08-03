@@ -265,7 +265,15 @@ export default function Home() {
   });
 
   // Helper functions
-  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  // Helper function to format currency (values stored in thousands, no decimals)
+  const formatCurrency = (thousands: number) => {
+    return new Intl.NumberFormat('es-AR', { 
+      style: 'currency', 
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(thousands * 1000);
+  };
 
   const updateSessionUnits = (taskId: string, change: number) => {
     setSessionUnits(prev => ({
@@ -408,7 +416,7 @@ export default function Home() {
                             className="w-full"
                             onClick={() => sendPaymentMutation.mutate({ 
                               toUserId: child.id, 
-                              amount: (child.balance?.pending || 0) / 100 
+                              amount: child.balance?.pending || 0
                             })}
                             disabled={!child.balance?.pending || sendPaymentMutation.isPending}
                           >
@@ -953,22 +961,23 @@ export default function Home() {
             </div>
             
             <div>
-              <Label htmlFor="modal-payment">Pago por Tarea</Label>
+              <Label htmlFor="modal-payment">Pago por Tarea (en miles)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-gray-500">$</span>
                 <Input
                   id="modal-payment"
                   type="number"
-                  step="0.01"
+                  min="0"
+                  step="1"
                   className="pl-8"
                   value={taskForm.paymentAmount}
                   onChange={(e) => setTaskForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
-                  placeholder="0.00"
+                  placeholder="5 (equivale a $5.000)"
                 />
               </div>
               {taskForm.type === 'recurring' && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Para tareas recurrentes, esto es el pago por unidad
+                  Para tareas recurrentes, esto es el pago por unidad (en miles)
                 </p>
               )}
             </div>
@@ -995,7 +1004,7 @@ export default function Home() {
               <Button 
                 onClick={() => createTaskMutation.mutate({
                   ...taskForm,
-                  paymentAmount: Math.round(parseFloat(taskForm.paymentAmount) * 100)
+                  paymentAmount: parseInt(taskForm.paymentAmount) || 0
                 })}
                 disabled={createTaskMutation.isPending || !taskForm.title || !taskForm.paymentAmount}
                 className="flex-1"
@@ -1060,26 +1069,26 @@ export default function Home() {
               </div>
               
               <div>
-                <Label htmlFor="edit-payment">Pago</Label>
+                <Label htmlFor="edit-payment">Pago (en miles)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                   <Input
                     id="edit-payment"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     className="pl-8"
-                    value={(editingTask.paymentAmount / 100).toFixed(2)}
+                    value={editingTask.paymentAmount}
                     onChange={(e) => setEditingTask(prev => ({ 
                       ...prev, 
-                      paymentAmount: Math.round(parseFloat(e.target.value || '0') * 100)
+                      paymentAmount: parseInt(e.target.value || '0')
                     }))}
-                    placeholder="0.00"
+                    placeholder="5 (equivale a $5.000)"
                   />
                 </div>
                 {editingTask.type === 'recurring' && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Para tareas recurrentes, esto es el pago por unidad
+                    Para tareas recurrentes, esto es el pago por unidad (en miles)
                   </p>
                 )}
               </div>
