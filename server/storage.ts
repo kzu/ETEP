@@ -65,6 +65,7 @@ export interface IStorage {
   createNotification(data: { userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(notificationId: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
   
   // Role and family operations
   updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
@@ -296,6 +297,12 @@ export class DatabaseStorage implements IStorage {
     // Delete the notification instead of just marking as read
     await db.delete(notifications)
       .where(eq(notifications.id, notificationId));
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    // Delete all notifications for the user
+    await db.delete(notifications)
+      .where(eq(notifications.userId, userId));
   }
 
   // Role and family operations

@@ -51,6 +51,25 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
     }
   });
 
+  // Mark all notifications as read mutation
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/notifications/read-all', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to mark all notifications as read');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    }
+  });
+
   // WebSocket connection for real-time notifications
   useEffect(() => {
     if (!userId) return;
@@ -177,7 +196,20 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-96 overflow-hidden">
           <div className="p-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => markAllAsReadMutation.mutate()}
+                  disabled={markAllAsReadMutation.isPending}
+                  className="text-xs h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                >
+                  Marcar todas como leídas
+                </Button>
+              )}
+            </div>
             {unreadCount > 0 && (
               <p className="text-sm text-gray-500">{unreadCount} sin leer</p>
             )}
