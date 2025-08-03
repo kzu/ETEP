@@ -161,6 +161,7 @@ export default function Home() {
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/history"] }); // Refresh child history
           queryClient.invalidateQueries({ queryKey: ["/api/children"] }); // Refresh children balance data
         } else if (data.type === 'payment_updated') {
           console.log("Payment updated, refreshing children balance data");
@@ -269,6 +270,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
       queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       // Invalidate auth user data to update child balance cards
