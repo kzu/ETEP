@@ -218,6 +218,29 @@ export default function Home() {
     },
   });
 
+  const updateTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      await apiRequest('PATCH', `/api/tasks/${taskData.id}`, taskData);
+    },
+    onSuccess: () => {
+      toast({ title: "Éxito", description: "Tarea actualizada exitosamente" });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setEditingTask(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Iniciando sesión nuevamente...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "No se pudo actualizar la tarea", variant: "destructive" });
+    },
+  });
+
   const confirmPaymentMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       await apiRequest('PATCH', `/api/payments/${paymentId}/confirm`, {});
@@ -1140,11 +1163,8 @@ export default function Home() {
               <div className="flex space-x-2 pt-4">
                 <Button
                   className="flex-1"
-                  onClick={() => {
-                    // TODO: Implement update task mutation
-                    setEditingTask(null);
-                    toast({ title: "Información", description: "Función de editar pendiente de implementar" });
-                  }}
+                  onClick={() => updateTaskMutation.mutate(editingTask)}
+                  disabled={updateTaskMutation.isPending || !editingTask.title || !editingTask.paymentAmount}
                 >
                   Guardar Cambios
                 </Button>

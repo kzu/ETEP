@@ -99,6 +99,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update a task
+  app.patch('/api/tasks/:taskId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { taskId } = req.params;
+      const { title, description, type, paymentAmount, assignedToIds } = req.body;
+      
+      // Get the existing task to verify ownership
+      const existingTask = await storage.getTaskById(taskId);
+      if (!existingTask || existingTask.createdBy !== userId) {
+        return res.status(404).json({ message: 'Task not found or not authorized' });
+      }
+      
+      // Only allow updating available tasks
+      if (existingTask.status !== 'available') {
+        return res.status(400).json({ message: 'Can only edit available tasks' });
+      }
+      
+      const updatedTask = await storage.updateTask(taskId, {
+        title,
+        description,
+        type,
+        paymentAmount,
+        assignedToIds: assignedToIds || []
+      });
+      
+      res.json(updatedTask);
+    } catch (error) {
+      console.error('Error updating task:', error);
+      res.status(500).json({ message: 'Failed to update task' });
+    }
+  });
+
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
