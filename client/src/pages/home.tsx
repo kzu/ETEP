@@ -280,28 +280,7 @@ export default function Home() {
     },
   });
 
-  const confirmPaymentMutation = useMutation({
-    mutationFn: async (paymentId: string) => {
-      await apiRequest('PATCH', `/api/payments/${paymentId}/confirm`, {});
-    },
-    onSuccess: () => {
-      toast({ title: "Éxito", description: "Pago confirmado y agregado a tu cuenta" });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "No autorizado",
-          description: "Iniciando sesión nuevamente...",
-          variant: "destructive",
-        });
-        setTimeout(() => window.location.href = "/api/login", 500);
-        return;
-      }
-      toast({ title: "Error", description: "No se pudo confirmar el pago", variant: "destructive" });
-    },
-  });
+  // Payment confirmation removed - payments are now automatically processed
 
   const inviteChildMutation = useMutation({
     mutationFn: async (childEmail: string) => {

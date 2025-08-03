@@ -360,12 +360,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const payment = await storage.createPayment(validatedData);
       
+      // Automatically move pending amount to accumulated without child confirmation
+      const childBalance = await storage.getBalance(validatedData.toUserId);
+      if (childBalance) {
+        console.log("Current child balance before payment:", childBalance);
+        console.log("Payment amount:", validatedData.amount);
+        
+        const newAccumulated = childBalance.accumulated + validatedData.amount;
+        const newPending = Math.max(0, childBalance.pending - validatedData.amount);
+        
+        console.log("Updating balance - new accumulated:", newAccumulated, "new pending:", newPending);
+        
+        await storage.updateBalance(
+          validatedData.toUserId,
+          newAccumulated,
+          newPending
+        );
+        
+        // Verify the update
+        const updatedBalance = await storage.getBalance(validatedData.toUserId);
+        console.log("Updated child balance after payment:", updatedBalance);
+      }
+      
+      // Automatically mark payment as confirmed
+      await storage.updatePaymentStatus(payment.id, 'confirmed');
+      
       // Create notification for child
       const notification = await storage.createNotification({
         userId: validatedData.toUserId,
-        title: "Pago enviado",
-        message: `Papá envió un pago de $${(validatedData.amount / 100).toFixed(2)}. ¡Confirma para agregarlo a tu cuenta!`,
-        type: "payment_sent",
+        title: "Pago recibido",
+        message: `¡Recibiste $${(validatedData.amount / 100).toFixed(2)} de papá! Se agregó a tu dinero acumulado.`,
+        type: "payment_received",
         relatedId: payment.id
       });
       
@@ -379,45 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/payments/:id/confirm', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      const { id } = req.params;
-      
-      if (!user || user.role !== 'child') {
-        return res.status(403).json({ message: "Only children can confirm payments" });
-      }
-      
-      const payments = await storage.getPaymentsByUser(userId);
-      const payment = payments.find(p => p.id === id);
-      
-      if (!payment) {
-        return res.status(404).json({ message: "Payment not found" });
-      }
-      
-      if (payment.status === 'confirmed') {
-        return res.status(400).json({ message: "Payment already confirmed" });
-      }
-      
-      await storage.updatePaymentStatus(id, 'confirmed');
-      
-      // Update balances
-      const childBalance = await storage.getBalance(userId);
-      if (childBalance) {
-        await storage.updateBalance(
-          userId,
-          childBalance.accumulated + payment.amount,
-          childBalance.pending - payment.amount
-        );
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error confirming payment:", error);
-      res.status(500).json({ message: "Failed to confirm payment" });
-    }
-  });
+  // Payment confirmation route removed - payments are now automatically confirmed
 
   // Notification routes
   app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
