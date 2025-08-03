@@ -65,6 +65,7 @@ export interface IStorage {
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
   acceptInvitation(invitationId: string, childId: string): Promise<void>;
+  getUserByEmail(email: string): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -205,8 +206,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markNotificationAsRead(notificationId: string): Promise<void> {
-    await db.update(notifications)
-      .set({ isRead: true })
+    // Delete the notification instead of just marking as read
+    await db.delete(notifications)
       .where(eq(notifications.id, notificationId));
   }
 
@@ -267,6 +268,11 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ parentId: invitation.parentId, updatedAt: new Date() })
       .where(eq(users.id, childId));
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 }
 

@@ -372,7 +372,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const invitation = await storage.createFamilyInvitation(userId, childEmail);
       
-      // Don't create notification here - will be handled when child logs in and checks invitations
+      // Try to find the child user by email and create notification if they exist
+      const childUser = await storage.getUserByEmail(childEmail);
+      if (childUser) {
+        const notification = await storage.createNotification({
+          userId: childUser.id,
+          title: "Invitación familiar",
+          message: `${user.firstName || 'Un padre'} te ha invitado a unirte a su familia. Revisa tus invitaciones pendientes.`,
+          type: "family_invitation",
+          relatedId: invitation.id
+        });
+        
+        // Broadcast real-time notification to child
+        broadcastNotificationToUser(childUser.id, notification);
+      }
       
       res.json(invitation);
     } catch (error) {
