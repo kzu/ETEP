@@ -213,13 +213,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create notification for parent
       if (user.parentId) {
-        await storage.createNotification({
+        const notification = await storage.createNotification({
           userId: user.parentId,
           title: "Nueva tarea enviada",
           message: `${user.firstName || user.email} ha enviado una tarea para revisión`,
           type: "task_submitted",
           relatedId: submission.id
         });
+        
+        // Broadcast real-time notification to parent
+        broadcastNotificationToUser(user.parentId, notification);
       }
       
       res.json(submission);

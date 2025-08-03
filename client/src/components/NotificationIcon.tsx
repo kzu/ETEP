@@ -71,6 +71,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
       if (data.type === 'notification') {
         // Refetch notifications when new one arrives
         refetch();
+        
+        // If it's a task submission notification, also refresh pending tasks
+        if (data.data?.type === 'task_submitted') {
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
+        }
       }
     };
 
