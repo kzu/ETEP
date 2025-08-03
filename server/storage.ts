@@ -44,6 +44,7 @@ export interface IStorage {
   // Task submission operations
   createTaskSubmission(submission: InsertTaskSubmission): Promise<TaskSubmission>;
   getTaskSubmissionsByUser(userId: string): Promise<TaskSubmission[]>;
+  getTaskSubmissionsByTask(taskId: string): Promise<TaskSubmission[]>;
   getPendingTaskSubmissions(parentId: string): Promise<TaskSubmission[]>;
   updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void>;
   
@@ -170,6 +171,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(taskSubmissions)
       .where(eq(taskSubmissions.submittedById, userId))
       .orderBy(desc(taskSubmissions.submittedAt));
+  }
+
+  async getTaskSubmissionsByTask(taskId: string): Promise<TaskSubmission[]> {
+    return await db.select().from(taskSubmissions).where(eq(taskSubmissions.taskId, taskId));
   }
 
   async getPendingTaskSubmissions(parentId: string): Promise<TaskSubmission[]> {

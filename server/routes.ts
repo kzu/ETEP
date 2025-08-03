@@ -112,9 +112,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Task not found or not authorized' });
       }
       
-      // Only allow updating available tasks
+      // Only allow updating available tasks (never completed/submitted tasks)
       if (existingTask.status !== 'available') {
-        return res.status(400).json({ message: 'Can only edit available tasks' });
+        return res.status(400).json({ message: 'Can only edit available tasks. Completed tasks cannot be modified to preserve financial integrity.' });
+      }
+
+      // Check if task has any submissions (even if rejected) - these should not be editable
+      const taskSubmissions = await storage.getTaskSubmissionsByTask(taskId);
+      if (taskSubmissions.length > 0) {
+        return res.status(400).json({ message: 'Cannot edit tasks that have submissions. This preserves historical financial data.' });
       }
       
       const updatedTask = await storage.updateTask(taskId, {
