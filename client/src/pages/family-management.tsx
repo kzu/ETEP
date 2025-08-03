@@ -62,7 +62,7 @@ export default function FamilyManagement() {
   // Get current user info
   const { data: user } = useQuery({
     queryKey: ['/api/auth/user']
-  });
+  }) as { data: { id: string } | undefined };
 
   // Fetch pending invitations sent from this family
   const { data: pendingInvitations, isLoading: invitationsLoading, refetch: refetchPendingInvitations } = useQuery({
@@ -86,9 +86,16 @@ export default function FamilyManagement() {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'notification' && data.data?.type === 'invitation_created') {
-          console.log("New invitation created, refreshing pending invitations");
-          refetchPendingInvitations();
+        if (data.type === 'notification') {
+          if (data.data?.type === 'invitation_created') {
+            console.log("New invitation created, refreshing pending invitations");
+            refetchPendingInvitations();
+          } else if (data.data?.type === 'invitation_accepted') {
+            console.log("Invitation accepted, refreshing family data and pending invitations");
+            // Refresh both family data (to show new members) and pending invitations (to remove accepted ones)
+            queryClient.invalidateQueries({ queryKey: ['/api/family'] });
+            refetchPendingInvitations();
+          }
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);

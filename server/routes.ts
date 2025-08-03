@@ -743,8 +743,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         relatedId: id
       });
       
-      // Broadcast real-time notification
+      // Broadcast real-time notification to the person who sent the invitation
       broadcastNotificationToUser(invitation.invitedByUserId, notification);
+      
+      // Also broadcast to all family members that someone new has joined
+      await broadcastNotificationToFamily(invitation.familyId, {
+        type: 'invitation_accepted',
+        newMemberId: userId,
+        newMemberRole: invitation.inviteeRole,
+        newMemberName: user?.firstName || 'Nuevo miembro'
+      });
       
       res.json({ success: true });
     } catch (error) {
