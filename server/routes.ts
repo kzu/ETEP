@@ -307,12 +307,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (submission) {
           const childBalance = await storage.getBalance(submission.submittedById);
+          console.log("Current child balance:", childBalance);
+          console.log("Task submission amount:", submission.totalAmount);
           if (childBalance) {
+            const newPending = childBalance.pending + submission.totalAmount;
+            console.log("Updating child balance - new pending:", newPending);
             await storage.updateBalance(
               submission.submittedById,
               childBalance.accumulated,
-              childBalance.pending + submission.totalAmount
+              newPending
             );
+            // Verify the update
+            const updatedBalance = await storage.getBalance(submission.submittedById);
+            console.log("Updated child balance:", updatedBalance);
           }
           
           // Create notification for child
