@@ -63,6 +63,7 @@ export interface IStorage {
   updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
   createFamilyInvitation(parentId: string, childEmail: string): Promise<FamilyInvitation>;
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
+  getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
   acceptInvitation(invitationId: string, childId: string): Promise<void>;
 }
 

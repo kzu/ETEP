@@ -1,9 +1,29 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema } from "@shared/schema";
 import { z } from "zod";
+
+// Store WebSocket connections by user ID
+const userConnections = new Map<string, WebSocket[]>();
+
+// Helper function to broadcast notification to user
+function broadcastNotificationToUser(userId: string, notification: any) {
+  const connections = userConnections.get(userId);
+  if (connections) {
+    const message = JSON.stringify({
+      type: 'notification',
+      data: notification
+    });
+    connections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+      }
+    });
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -193,13 +213,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Create notification for child
-          await storage.createNotification({
+          const notification = await storage.createNotification({
             userId: submission.submittedById,
             title: "Tarea aprobada",
             message: `Tu tarea ha sido aprobada. +$${(submission.totalAmount / 100).toFixed(2)}`,
             type: "task_approved",
             relatedId: submission.id
           });
+          
+          // Broadcast real-time notification
+          broadcastNotificationToUser(submission.submittedById, notification);
         }
       }
       
@@ -229,13 +252,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment(validatedData);
       
       // Create notification for child
-      await storage.createNotification({
+      const notification = await storage.createNotification({
         userId: validatedData.toUserId,
         title: "Pago enviado",
         message: `Papá envió un pago de $${(validatedData.amount / 100).toFixed(2)}. ¡Confirma para agregarlo a tu cuenta!`,
         type: "payment_sent",
         relatedId: payment.id
       });
+      
+      // Broadcast real-time notification
+      broadcastNotificationToUser(validatedData.toUserId, notification);
       
       res.json(payment);
     } catch (error) {
@@ -395,13 +421,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create notification for the parent
       const user = await storage.getUser(userId);
-      await storage.createNotification({
+      const notification = await storage.createNotification({
         userId: invitation.parentId,
         type: 'invitation_accepted',
         title: 'Invitación Aceptada',
         message: `${user?.firstName || 'Tu hijo/a'} ha aceptado la invitación y se ha unido a la familia`,
         relatedId: id
       });
+      
+      // Broadcast real-time notification
+      broadcastNotificationToUser(invitation.parentId, notification);
       
       res.json({ success: true });
     } catch (error) {
@@ -411,5 +440,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Setup WebSocket server for real-time notifications
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws: WebSocket) => {
+    let userId: string | null = null;
+    
+    ws.on('message', (message: string) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        if (data.type === 'auth' && data.userId && typeof data.userId === 'string') {
+          const userIdValue = data.userId;
+          userId = userIdValue;
+          
+          // Add connection to user's connection list
+          if (!userConnections.has(userIdValue)) {
+            userConnections.set(userIdValue, []);
+          }
+          const connections = userConnections.get(userIdValue);
+          if (connections) {
+            connections.push(ws);
+          }
+          
+          ws.send(JSON.stringify({ type: 'auth_success' }));
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      if (userId) {
+        const userIdValue = userId;
+        // Remove connection from user's connection list
+        const connections = userConnections.get(userIdValue);
+        if (connections) {
+          const index = connections.indexOf(ws);
+          if (index > -1) {
+            connections.splice(index, 1);
+          }
+          if (connections.length === 0) {
+            userConnections.delete(userIdValue);
+          }
+        }
+      }
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+  });
+  
   return httpServer;
 }

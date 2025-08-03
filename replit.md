@@ -7,6 +7,9 @@
 - Implemented family invitation system: Parents can invite children via email
 - Enhanced user onboarding with pending invitations display
 - Added role-based access control for all features
+- Implemented real-time notification system with WebSocket support
+- Added notification icon with dropdown panel for real-time updates
+- Enhanced notification management with mark-as-read functionality
 
 # User Preferences
 
@@ -27,6 +30,8 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: OpenID Connect (OIDC) with Replit Auth integration using Passport.js
 - **Session Management**: Express sessions with PostgreSQL storage via connect-pg-simple
 - **API Design**: RESTful endpoints with proper error handling and request logging middleware
+- **Real-time Communication**: WebSocket server integrated with Express for live notifications
+- **Notification Broadcasting**: User-based connection management for targeted real-time updates
 
 ## Database Design
 - **Database**: PostgreSQL with Neon serverless connection pooling

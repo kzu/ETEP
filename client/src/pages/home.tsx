@@ -32,6 +32,7 @@ import {
   User,
   Home as HomeIcon
 } from "lucide-react";
+import { NotificationIcon } from "@/components/NotificationIcon";
 
 export default function Home() {
   const { user, isLoading: authLoading } = useAuth();
@@ -304,6 +305,9 @@ export default function Home() {
                   Hijo
                 </Button>
               </div>
+              
+              {/* Notification Icon */}
+              <NotificationIcon userId={user.id} />
               
               {/* Profile */}
               <div className="flex items-center space-x-2">
