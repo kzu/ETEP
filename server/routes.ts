@@ -635,6 +635,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Broadcast real-time notification
       broadcastNotificationToUser(validatedData.toUserId, notification);
       
+      // Broadcast payment update to all parents and collaborators in the family
+      const familyMembers = await storage.getFamilyMembers(familyId);
+      const parentsAndCollaborators = familyMembers.filter(member => 
+        member.role === 'admin' || member.role === 'collaborator'
+      ).map(member => member.user);
+      
+      for (const parentOrCollaborator of parentsAndCollaborators) {
+        // Skip the user who performed the action (they'll see the update immediately)
+        if (parentOrCollaborator.id !== userId) {
+          broadcastSystemMessageToUser(parentOrCollaborator.id, {
+            type: 'payment_updated',
+            paymentId: payment.id,
+            childId: validatedData.toUserId,
+            amount: validatedData.amount
+          });
+        }
+      }
+      
       res.json(payment);
     } catch (error) {
       console.error("Error creating payment:", error);

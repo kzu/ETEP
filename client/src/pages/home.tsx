@@ -155,6 +155,11 @@ export default function Home() {
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
           queryClient.invalidateQueries({ queryKey: ["/api/children"] }); // Refresh children balance data
+        } else if (data.type === 'payment_updated') {
+          console.log("Payment updated, refreshing children balance data");
+          // Refresh children balance data when payment is made
+          queryClient.invalidateQueries({ queryKey: ["/api/children"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
