@@ -651,6 +651,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Broadcast to family members to update their pending invitations list
+      broadcastNotificationToFamily(family.id, {
+        type: 'invitation_created',
+        invitationId: invitation.id,
+        inviteeEmail: inviteeEmail,
+        inviteeRole: inviteeRole
+      });
+      
       res.json(invitation);
     } catch (error) {
       console.error("Error creating family invitation:", error);

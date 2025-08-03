@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,10 +65,44 @@ export default function FamilyManagement() {
   });
 
   // Fetch pending invitations sent from this family
-  const { data: pendingInvitations, isLoading: invitationsLoading } = useQuery({
+  const { data: pendingInvitations, isLoading: invitationsLoading, refetch: refetchPendingInvitations } = useQuery({
     queryKey: ['/api/family/invitations/pending'],
     select: (data) => data as any[]
   });
+
+  // WebSocket for real-time updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log("WebSocket connected for family management");
+      socket.send(JSON.stringify({ type: 'auth', userId: user.id }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'notification' && data.data?.type === 'invitation_created') {
+          console.log("New invitation created, refreshing pending invitations");
+          refetchPendingInvitations();
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [user?.id, refetchPendingInvitations]);
 
   // Send invitation mutation
   const inviteMutation = useMutation({
