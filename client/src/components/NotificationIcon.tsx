@@ -100,6 +100,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
         if (data.data?.type === 'payment_received') {
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         }
+        
+        // If it's a task approved notification, refresh user balance
+        if (data.data?.type === 'task_approved') {
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
       }
     };
 
