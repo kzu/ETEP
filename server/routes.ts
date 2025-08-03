@@ -353,13 +353,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'child') {
-        return res.status(403).json({ message: "Only children can submit tasks" });
-      }
-      
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
         return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      // Check if user has child role in the family
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || userFamilyRole !== 'child') {
+        return res.status(403).json({ message: "Only children can submit tasks" });
       }
       
       const validatedData = insertTaskSubmissionSchema.parse({
