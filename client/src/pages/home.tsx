@@ -441,27 +441,20 @@ export default function Home() {
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="pendientes" className="flex items-center space-x-2">
                     <span>Pendientes</span>
-                    <Badge variant="secondary" className="ml-1">
-                      {countTasksByStatus('submitted')}
-                    </Badge>
+                    {countTasksByStatus('submitted') > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {countTasksByStatus('submitted')}
+                      </Badge>
+                    )}
                   </TabsTrigger>
-                  <TabsTrigger value="aprobadas" className="flex items-center space-x-2">
+                  <TabsTrigger value="aprobadas">
                     <span>Aprobadas</span>
-                    <Badge variant="secondary" className="ml-1">
-                      {countTasksByStatus('approved')}
-                    </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="rechazadas" className="flex items-center space-x-2">
+                  <TabsTrigger value="rechazadas">
                     <span>Rechazadas</span>
-                    <Badge variant="secondary" className="ml-1">
-                      {countTasksByStatus('rejected')}
-                    </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="disponibles" className="flex items-center space-x-2">
+                  <TabsTrigger value="disponibles">
                     <span>Disponibles</span>
-                    <Badge variant="secondary" className="ml-1">
-                      {createdTasks?.length || 0}
-                    </Badge>
                   </TabsTrigger>
                 </TabsList>
 
