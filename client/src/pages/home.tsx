@@ -69,20 +69,6 @@ export default function Home() {
     }
   }, [user]);
 
-  // Auto-redirect to family management if no children and user is parent
-  useEffect(() => {
-    if (isParent && !childrenLoading && children && Array.isArray(children) && children.length === 0) {
-      // Show informative message and redirect
-      toast({
-        title: "Sin hijos en la familia",
-        description: "Redirigiendo a gestión familiar para invitar hijos...",
-      });
-      setTimeout(() => {
-        setLocation('/family');
-      }, 2000);
-    }
-  }, [isParent, children, childrenLoading, setLocation, toast]);
-
   // Get current family role for query enabling
   const currentFamilyRole = (user as any)?.currentFamilyRole;
   const isParent = currentFamilyRole && currentFamilyRole !== 'child';
@@ -125,6 +111,20 @@ export default function Home() {
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["/api/notifications"],
   });
+
+  // Auto-redirect to family management if no children and user is parent
+  useEffect(() => {
+    if (isParent && !childrenLoading && children && Array.isArray(children) && children.length === 0) {
+      // Show informative message and redirect
+      toast({
+        title: "Sin hijos en la familia",
+        description: "Redirigiendo a gestión familiar para invitar hijos...",
+      });
+      setTimeout(() => {
+        setLocation('/family');
+      }, 2000);
+    }
+  }, [isParent, children, childrenLoading, setLocation, toast]);
 
   // Task creation form state
   const [taskForm, setTaskForm] = useState({
