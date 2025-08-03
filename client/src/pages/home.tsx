@@ -265,14 +265,14 @@ export default function Home() {
   });
 
   // Helper functions
-  // Helper function to format currency (values stored in thousands, no decimals)
-  const formatCurrency = (thousands: number) => {
+  // Helper function to format currency (values stored as full amounts)
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', { 
       style: 'currency', 
       currency: 'ARS',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(thousands * 1000);
+    }).format(amount);
   };
 
   const updateSessionUnits = (taskId: string, change: number) => {
@@ -961,23 +961,23 @@ export default function Home() {
             </div>
             
             <div>
-              <Label htmlFor="modal-payment">Pago por Tarea (en miles)</Label>
+              <Label htmlFor="modal-payment">Pago por Tarea</Label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-gray-500">$</span>
                 <Input
                   id="modal-payment"
                   type="number"
                   min="0"
-                  step="1"
+                  step="1000"
                   className="pl-8"
                   value={taskForm.paymentAmount}
                   onChange={(e) => setTaskForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
-                  placeholder="5 (equivale a $5.000)"
+                  placeholder="5000"
                 />
               </div>
               {taskForm.type === 'recurring' && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Para tareas recurrentes, esto es el pago por unidad (en miles)
+                  Para tareas recurrentes, esto es el pago por unidad
                 </p>
               )}
             </div>
@@ -1069,26 +1069,26 @@ export default function Home() {
               </div>
               
               <div>
-                <Label htmlFor="edit-payment">Pago (en miles)</Label>
+                <Label htmlFor="edit-payment">Pago</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                   <Input
                     id="edit-payment"
                     type="number"
                     min="0"
-                    step="1"
+                    step="1000"
                     className="pl-8"
                     value={editingTask.paymentAmount}
                     onChange={(e) => setEditingTask(prev => ({ 
                       ...prev, 
                       paymentAmount: parseInt(e.target.value || '0')
                     }))}
-                    placeholder="5 (equivale a $5.000)"
+                    placeholder="5000"
                   />
                 </div>
                 {editingTask.type === 'recurring' && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Para tareas recurrentes, esto es el pago por unidad (en miles)
+                    Para tareas recurrentes, esto es el pago por unidad
                   </p>
                 )}
               </div>
