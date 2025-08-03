@@ -355,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPaymentSchema.parse({
         ...req.body,
         fromUserId: userId,
-        amount: Math.round(req.body.amount * 100) // convert to cents
+        amount: req.body.amount // amount is already in cents from frontend
       });
       
       const payment = await storage.createPayment(validatedData);
