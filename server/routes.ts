@@ -82,6 +82,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes
+  app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'parent') {
+        return res.status(403).json({ message: "Only parents can view tasks" });
+      }
+      
+      const tasks = await storage.getTasksByCreator(userId);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
