@@ -5,6 +5,7 @@ import {
   balances,
   payments,
   notifications,
+  familyInvitations,
   type User,
   type UpsertUser,
   type Task,
@@ -15,6 +16,8 @@ import {
   type Payment,
   type InsertPayment,
   type Notification,
+  type FamilyInvitation,
+  type UpdateUserRole,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -55,6 +58,12 @@ export interface IStorage {
   createNotification(userId: string, title: string, message: string, type: string, relatedId?: string): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(notificationId: string): Promise<void>;
+  
+  // Role and family operations
+  updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
+  createFamilyInvitation(parentId: string, childEmail: string): Promise<FamilyInvitation>;
+  getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
+  acceptInvitation(invitationId: string, childId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -198,6 +207,59 @@ export class DatabaseStorage implements IStorage {
     await db.update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.id, notificationId));
+  }
+
+  // Role and family operations
+  async updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User> {
+    const updateData: any = { role: roleData.role, updatedAt: new Date() };
+    
+    // If it's a child joining a family, find parent by email
+    if (roleData.role === 'child' && roleData.parentEmail) {
+      const [parent] = await db.select().from(users).where(eq(users.email, roleData.parentEmail));
+      if (parent) {
+        updateData.parentId = parent.id;
+      }
+    }
+    
+    const [user] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async createFamilyInvitation(parentId: string, childEmail: string): Promise<FamilyInvitation> {
+    const [invitation] = await db.insert(familyInvitations)
+      .values({ parentId, childEmail })
+      .returning();
+    return invitation;
+  }
+
+  async getInvitationsByEmail(email: string): Promise<FamilyInvitation[]> {
+    return await db.select().from(familyInvitations)
+      .where(and(
+        eq(familyInvitations.childEmail, email),
+        eq(familyInvitations.status, "pending")
+      ))
+      .orderBy(desc(familyInvitations.createdAt));
+  }
+
+  async acceptInvitation(invitationId: string, childId: string): Promise<void> {
+    // Get the invitation first
+    const [invitation] = await db.select().from(familyInvitations)
+      .where(eq(familyInvitations.id, invitationId));
+    
+    if (!invitation) return;
+
+    // Update invitation status
+    await db.update(familyInvitations)
+      .set({ status: "accepted", acceptedAt: new Date() })
+      .where(eq(familyInvitations.id, invitationId));
+
+    // Update child's parentId
+    await db.update(users)
+      .set({ parentId: invitation.parentId, updatedAt: new Date() })
+      .where(eq(users.id, childId));
   }
 }
 

@@ -34,8 +34,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default("parent"), // "parent" or "child"
-  parentId: varchar("parent_id").references(() => users.id),
+  role: varchar("role"), // "parent" or "child" - null means not set yet
+  parentId: varchar("parent_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -95,6 +95,16 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").notNull().default(false),
   relatedId: varchar("related_id"), // can reference task, payment, etc.
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Family invitations table
+export const familyInvitations = pgTable("family_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  parentId: varchar("parent_id").notNull().references(() => users.id),
+  childEmail: varchar("child_email").notNull(),
+  status: varchar("status").notNull().default("pending"), // "pending", "accepted", "rejected"
+  createdAt: timestamp("created_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
 });
 
 // Relations
@@ -180,6 +190,13 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const familyInvitationsRelations = relations(familyInvitations, ({ one }) => ({
+  parent: one(users, {
+    fields: [familyInvitations.parentId],
+    references: [users.id],
+  }),
+}));
+
 // Schemas
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -215,3 +232,11 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
 
 export type Notification = typeof notifications.$inferSelect;
+export type FamilyInvitation = typeof familyInvitations.$inferSelect;
+
+// Update user schemas to allow null role
+export const updateUserRoleSchema = z.object({
+  role: z.enum(["parent", "child"]),
+  parentEmail: z.string().email().optional(), // for children joining families
+});
+export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;

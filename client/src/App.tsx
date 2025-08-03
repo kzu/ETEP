@@ -7,14 +7,17 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
+import RoleSelection from "@/pages/role-selection";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
+      ) : !user?.role ? (
+        <Route path="/" component={RoleSelection} />
       ) : (
         <>
           <Route path="/" component={Home} />

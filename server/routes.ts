@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema } from "@shared/schema";
+import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -304,6 +304,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking notification as read:", error);
       res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Role and family management routes
+  app.patch('/api/user/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = updateUserRoleSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserRole(userId, validatedData);
+      
+      // Create balance if user becomes a child
+      if (validatedData.role === 'child') {
+        let balance = await storage.getBalance(userId);
+        if (!balance) {
+          balance = await storage.createBalance(userId);
+        }
+      }
+      
+      res.json({ ...updatedUser, balance: validatedData.role === 'child' ? await storage.getBalance(userId) : null });
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.post('/api/family-invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'parent') {
+        return res.status(403).json({ message: "Only parents can send invitations" });
+      }
+      
+      const { childEmail } = req.body;
+      if (!childEmail) {
+        return res.status(400).json({ message: "Child email is required" });
+      }
+
+      const invitation = await storage.createFamilyInvitation(userId, childEmail);
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error creating family invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  app.get('/api/family-invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email not found" });
+      }
+
+      const invitations = await storage.getInvitationsByEmail(user.email);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  app.patch('/api/family-invitations/:id/accept', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      await storage.acceptInvitation(id, userId);
+      
+      // Update user role to child after accepting invitation
+      await storage.updateUserRole(userId, { role: 'child' });
+      
+      // Create balance for the new child
+      let balance = await storage.getBalance(userId);
+      if (!balance) {
+        balance = await storage.createBalance(userId);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
     }
   });
 
