@@ -107,7 +107,15 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
   const handleMarkAsRead = async (notificationId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     try {
+      // Find the notification to check its type before marking as read
+      const notification = notifications.find(n => n.id === notificationId);
+      
       await markAsReadMutation.mutateAsync(notificationId);
+      
+      // If it's an invitation_accepted notification, refresh the page to show new family member
+      if (notification?.type === 'invitation_accepted') {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
