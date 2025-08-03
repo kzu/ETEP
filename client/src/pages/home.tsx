@@ -688,49 +688,7 @@ export default function Home() {
 
               {/* Notifications */}
               <div className="space-y-6">
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Notificaciones</h3>
-                  
-                  <div className="space-y-3">
-                    {notificationsLoading ? (
-                      Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-16" />)
-                    ) : !notifications?.length ? (
-                      <p className="text-gray-500 text-center py-4">No hay notificaciones</p>
-                    ) : (
-                      notifications?.slice(0, 5).map((notification: any) => (
-                        <div 
-                          key={notification.id} 
-                          className={`flex items-start space-x-3 p-3 rounded-lg border ${
-                            notification.type === 'task_approved' ? 'bg-green-50 border-green-200' :
-                            notification.type === 'payment_sent' ? 'bg-yellow-50 border-yellow-200' :
-                            'bg-blue-50 border-blue-200'
-                          }`}
-                        >
-                          {notification.type === 'task_approved' && <Check className="text-secondary mt-1" />}
-                          {notification.type === 'payment_sent' && <Coins className="text-accent mt-1" />}
-                          {notification.type === 'task_rejected' && <X className="text-red-500 mt-1" />}
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                            <p className="text-sm text-gray-600">{notification.message}</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(notification.createdAt).toLocaleDateString('es-ES')}
-                            </p>
-                            {notification.type === 'payment_sent' && notification.relatedId && (
-                              <Button
-                                size="sm"
-                                className="mt-2"
-                                onClick={() => confirmPaymentMutation.mutate(notification.relatedId)}
-                                disabled={confirmPaymentMutation.isPending}
-                              >
-                                Confirmar Pago
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </Card>
+                {/* Panel de notificaciones removido - se usa solo el icono desplegable */}
               </div>
             </div>
           </div>

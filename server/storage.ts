@@ -89,9 +89,10 @@ export class DatabaseStorage implements IStorage {
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     // Generate Gravatar URL if email is provided and no profile image exists
+    const gravatarUrl = userData.email ? generateGravatarUrl(userData.email) : userData.profileImageUrl;
     const dataWithGravatar = {
       ...userData,
-      profileImageUrl: userData.profileImageUrl || generateGravatarUrl(userData.email),
+      profileImageUrl: userData.profileImageUrl || gravatarUrl,
       updatedAt: new Date(),
     };
 
@@ -102,8 +103,8 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           ...dataWithGravatar,
-          // Always refresh Gravatar URL on login
-          profileImageUrl: generateGravatarUrl(userData.email),
+          // Always refresh Gravatar URL on login if email exists
+          profileImageUrl: userData.email ? generateGravatarUrl(userData.email) : userData.profileImageUrl,
         },
       })
       .returning();
