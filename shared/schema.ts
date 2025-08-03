@@ -42,6 +42,7 @@ export const users = pgTable("users", {
 
 export const taskTypeEnum = pgEnum("task_type", ["oneTime", "recurring"]);
 export const taskStatusEnum = pgEnum("task_status", ["available", "submitted", "approved", "rejected"]);
+export const parentRoleEnum = pgEnum("parent_role", ["admin", "collaborator"]);
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -97,11 +98,30 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Family invitations table
+// Families table
+export const families = pgTable("families", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Family memberships table (both parents and children)
+export const familyMemberships = pgTable("family_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull().references(() => families.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  role: varchar("role").notNull(), // "admin", "collaborator", "child"
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Family invitations table (for both parents and children)
 export const familyInvitations = pgTable("family_invitations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  parentId: varchar("parent_id").notNull().references(() => users.id),
-  childEmail: varchar("child_email").notNull(),
+  familyId: varchar("family_id").notNull().references(() => families.id),
+  invitedByUserId: varchar("invited_by_user_id").notNull().references(() => users.id),
+  inviteeEmail: varchar("invitee_email").notNull(),
+  inviteeRole: varchar("invitee_role").notNull(), // "admin", "collaborator", "child"
   status: varchar("status").notNull().default("pending"), // "pending", "accepted", "rejected"
   createdAt: timestamp("created_at").defaultNow(),
   acceptedAt: timestamp("accepted_at"),
@@ -130,6 +150,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     relationName: "payment_receiver"
   }),
   notifications: many(notifications),
+  familyMemberships: many(familyMemberships),
+  sentInvitations: many(familyInvitations, {
+    relationName: "invitation_sender"
+  }),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -184,9 +208,29 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const familiesRelations = relations(families, ({ many }) => ({
+  memberships: many(familyMemberships),
+  invitations: many(familyInvitations),
+}));
+
+export const familyMembershipsRelations = relations(familyMemberships, ({ one }) => ({
+  family: one(families, {
+    fields: [familyMemberships.familyId],
+    references: [families.id],
+  }),
+  user: one(users, {
+    fields: [familyMemberships.userId],
+    references: [users.id],
+  }),
+}));
+
 export const familyInvitationsRelations = relations(familyInvitations, ({ one }) => ({
-  parent: one(users, {
-    fields: [familyInvitations.parentId],
+  family: one(families, {
+    fields: [familyInvitations.familyId],
+    references: [families.id],
+  }),
+  invitedBy: one(users, {
+    fields: [familyInvitations.invitedByUserId],
     references: [users.id],
   }),
 }));
@@ -226,9 +270,10 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
 
 export type Notification = typeof notifications.$inferSelect;
+export type Family = typeof families.$inferSelect;
+export type FamilyMembership = typeof familyMemberships.$inferSelect;
 export type FamilyInvitation = typeof familyInvitations.$inferSelect;
 
-// Update user schemas to allow null role
 export const updateUserRoleSchema = z.object({
   role: z.enum(["parent", "child"]),
   parentEmail: z.string().email().optional(), // for children joining families

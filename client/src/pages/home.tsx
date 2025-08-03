@@ -32,8 +32,10 @@ import {
   History,
   ListTodo,
   User,
-  Home as HomeIcon
+  Home as HomeIcon,
+  Users
 } from "lucide-react";
+import { Link } from "wouter";
 import { NotificationIcon } from "@/components/NotificationIcon";
 
 export default function Home() {
@@ -399,8 +401,18 @@ export default function Home() {
           /* Parent Dashboard */
           <div>
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Panel de Control Familiar</h2>
-              <p className="text-gray-600">Manage tasks and payments for your children</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Panel de Control Familiar</h2>
+                  <p className="text-gray-600">Gestiona tareas y pagos para tu familia</p>
+                </div>
+                <Link href="/family">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Gestionar Familia
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {/* Children Overview */}

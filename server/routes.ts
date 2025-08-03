@@ -471,27 +471,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== 'parent') {
         return res.status(403).json({ message: "Only parents can send invitations" });
       }
+
+      // Get user's family and role
+      const family = await storage.getFamilyByUserId(userId);
+      const userRole = await storage.getUserFamilyRole(userId);
       
-      const { childEmail } = req.body;
-      if (!childEmail) {
-        return res.status(400).json({ message: "Child email is required" });
+      if (!family) {
+        return res.status(404).json({ message: "User is not part of any family" });
+      }
+      
+      const { inviteeEmail, inviteeRole } = req.body;
+      if (!inviteeEmail || !inviteeRole) {
+        return res.status(400).json({ message: "Invitee email and role are required" });
       }
 
-      const invitation = await storage.createFamilyInvitation(userId, childEmail);
+      // Validate invitee role
+      if (!['admin', 'collaborator', 'child'].includes(inviteeRole)) {
+        return res.status(400).json({ message: "Invalid role specified" });
+      }
+
+      // Only admins can invite other admins or remove members
+      if (inviteeRole === 'admin' && userRole !== 'admin') {
+        return res.status(403).json({ message: "Only admins can invite other admins" });
+      }
+
+      const invitation = await storage.createFamilyInvitation(family.id, userId, inviteeEmail, inviteeRole);
       
-      // Try to find the child user by email and create notification if they exist
-      const childUser = await storage.getUserByEmail(childEmail);
-      if (childUser) {
+      // Try to find the invitee user by email and create notification if they exist
+      const inviteeUser = await storage.getUserByEmail(inviteeEmail);
+      if (inviteeUser) {
+        const roleText = inviteeRole === 'admin' ? 'Administrador' : 
+                        inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
+        
         const notification = await storage.createNotification({
-          userId: childUser.id,
+          userId: inviteeUser.id,
           title: "Invitación familiar",
-          message: `${user.firstName || 'A parent'} has invited you to join their family. Check your pending invitations.`,
+          message: `${user.firstName || 'Alguien'} te ha invitado a unirte a la familia "${family.name}" como ${roleText}.`,
           type: "family_invitation",
           relatedId: invitation.id
         });
         
-        // Broadcast real-time notification to child
-        broadcastNotificationToUser(childUser.id, notification);
+        // Broadcast real-time notification
+        broadcastNotificationToUser(inviteeUser.id, notification);
       }
       
       res.json(invitation);
@@ -530,27 +551,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.acceptInvitation(id, userId);
       
-      // Update user role to child after accepting invitation
-      await storage.updateUserRole(userId, { role: 'child' });
+      // Update user role based on invitation role
+      await storage.updateUserRole(userId, { role: invitation.inviteeRole === 'child' ? 'child' : 'parent' });
       
-      // Create balance for the new child
-      let balance = await storage.getBalance(userId);
-      if (!balance) {
-        balance = await storage.createBalance(userId);
+      // Create balance if the user becomes a child
+      if (invitation.inviteeRole === 'child') {
+        let balance = await storage.getBalance(userId);
+        if (!balance) {
+          balance = await storage.createBalance(userId);
+        }
       }
       
-      // Create notification for the parent
+      // Create notification for the person who sent the invitation
       const user = await storage.getUser(userId);
+      const roleText = invitation.inviteeRole === 'admin' ? 'Administrador' : 
+                      invitation.inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
+      
       const notification = await storage.createNotification({
-        userId: invitation.parentId,
+        userId: invitation.invitedByUserId,
         type: 'invitation_accepted',
         title: 'Invitación Aceptada',
-        message: `${user?.firstName || 'Your child'} has accepted the invitation and joined the family`,
+        message: `${user?.firstName || 'Alguien'} ha aceptado la invitación y se ha unido a la familia como ${roleText}.`,
         relatedId: id
       });
       
       // Broadcast real-time notification
-      broadcastNotificationToUser(invitation.parentId, notification);
+      broadcastNotificationToUser(invitation.invitedByUserId, notification);
       
       res.json({ success: true });
     } catch (error) {
@@ -572,23 +598,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update invitation status to rejected
       await storage.rejectInvitation(id);
       
-      // Create notification for the parent
+      // Create notification for the person who sent the invitation
       const user = await storage.getUser(userId);
+      const roleText = invitation.inviteeRole === 'admin' ? 'Administrador' : 
+                      invitation.inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
+      
       const notification = await storage.createNotification({
-        userId: invitation.parentId,
+        userId: invitation.invitedByUserId,
         type: 'invitation_rejected',
         title: 'Invitación Rechazada',
-        message: `${user?.firstName || 'Un usuario'} ha rechazado la invitación familiar`,
+        message: `${user?.firstName || 'Alguien'} ha rechazado la invitación para unirse como ${roleText}.`,
         relatedId: id
       });
       
       // Broadcast real-time notification
-      broadcastNotificationToUser(invitation.parentId, notification);
+      broadcastNotificationToUser(invitation.invitedByUserId, notification);
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error rejecting invitation:", error);
       res.status(500).json({ message: "Failed to reject invitation" });
+    }
+  });
+
+  // Family management routes
+  app.get('/api/family', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const family = await storage.getFamilyByUserId(userId);
+      
+      if (!family) {
+        return res.status(404).json({ message: "User is not part of any family" });
+      }
+
+      const members = await storage.getFamilyMembers(family.id);
+      res.json({ family, members });
+    } catch (error) {
+      console.error("Error fetching family:", error);
+      res.status(500).json({ message: "Failed to fetch family" });
+    }
+  });
+
+  app.get('/api/family/parents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const family = await storage.getFamilyByUserId(userId);
+      
+      if (!family) {
+        return res.status(404).json({ message: "User is not part of any family" });
+      }
+
+      const parents = await storage.getFamilyParents(family.id);
+      res.json(parents);
+    } catch (error) {
+      console.error("Error fetching family parents:", error);
+      res.status(500).json({ message: "Failed to fetch family parents" });
+    }
+  });
+
+  app.delete('/api/family/members/:memberId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { memberId } = req.params;
+      
+      // Check if current user is admin
+      const userRole = await storage.getUserFamilyRole(userId);
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Only administrators can remove family members" });
+      }
+
+      const family = await storage.getFamilyByUserId(userId);
+      if (!family) {
+        return res.status(404).json({ message: "Family not found" });
+      }
+
+      // Remove the member from family
+      await storage.removeFamilyMember(family.id, memberId);
+      
+      // Create notification for the removed member
+      const user = await storage.getUser(userId);
+      const notification = await storage.createNotification({
+        userId: memberId,
+        title: "Removido de la familia",
+        message: `${user?.firstName || 'Un administrador'} te ha removido de la familia "${family.name}".`,
+        type: "family_removal"
+      });
+      
+      // Broadcast real-time notification
+      broadcastNotificationToUser(memberId, notification);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing family member:", error);
+      res.status(500).json({ message: "Failed to remove family member" });
+    }
+  });
+
+  app.patch('/api/family/members/:memberId/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { memberId } = req.params;
+      const { newRole } = req.body;
+      
+      // Check if current user is admin
+      const userRole = await storage.getUserFamilyRole(userId);
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Only administrators can change member roles" });
+      }
+
+      // Validate new role
+      if (!['admin', 'collaborator', 'child'].includes(newRole)) {
+        return res.status(400).json({ message: "Invalid role specified" });
+      }
+
+      const family = await storage.getFamilyByUserId(userId);
+      if (!family) {
+        return res.status(404).json({ message: "Family not found" });
+      }
+
+      // Update the member's role
+      await storage.updateFamilyMemberRole(family.id, memberId, newRole);
+      
+      // Create notification for the member whose role changed
+      const user = await storage.getUser(userId);
+      const roleText = newRole === 'admin' ? 'Administrador' : 
+                      newRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
+      
+      const notification = await storage.createNotification({
+        userId: memberId,
+        title: "Rol actualizado",
+        message: `${user?.firstName || 'Un administrador'} ha cambiado tu rol a ${roleText} en la familia "${family.name}".`,
+        type: "role_change"
+      });
+      
+      // Broadcast real-time notification
+      broadcastNotificationToUser(memberId, notification);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating member role:", error);
+      res.status(500).json({ message: "Failed to update member role" });
     }
   });
 

@@ -5,6 +5,8 @@ import {
   balances,
   payments,
   notifications,
+  families,
+  familyMemberships,
   familyInvitations,
   type User,
   type UpsertUser,
@@ -16,6 +18,8 @@ import {
   type Payment,
   type InsertPayment,
   type Notification,
+  type Family,
+  type FamilyMembership,
   type FamilyInvitation,
   type UpdateUserRole,
 } from "@shared/schema";
@@ -32,6 +36,14 @@ export interface IStorage {
   
   // Family operations
   getChildren(parentId: string): Promise<User[]>;
+  getFamilyByUserId(userId: string): Promise<Family | undefined>;
+  getFamilyMembers(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
+  getFamilyParents(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
+  getUserFamilyRole(userId: string): Promise<string | undefined>;
+  createFamily(name: string, adminUserId: string): Promise<Family>;
+  addFamilyMember(familyId: string, userId: string, role: string): Promise<FamilyMembership>;
+  removeFamilyMember(familyId: string, userId: string): Promise<void>;
+  updateFamilyMemberRole(familyId: string, userId: string, newRole: string): Promise<void>;
   
   // Task operations
   createTask(task: InsertTask): Promise<Task>;
@@ -69,10 +81,10 @@ export interface IStorage {
   
   // Role and family operations
   updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
-  createFamilyInvitation(parentId: string, childEmail: string): Promise<FamilyInvitation>;
+  createFamilyInvitation(familyId: string, invitedByUserId: string, inviteeEmail: string, inviteeRole: string): Promise<FamilyInvitation>;
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
-  acceptInvitation(invitationId: string, childId: string): Promise<void>;
+  acceptInvitation(invitationId: string, userId: string): Promise<void>;
   rejectInvitation(invitationId: string): Promise<void>;
   getUserByEmail(email: string): Promise<User | undefined>;
 }
@@ -121,6 +133,91 @@ export class DatabaseStorage implements IStorage {
   // Family operations
   async getChildren(parentId: string): Promise<User[]> {
     return await db.select().from(users).where(eq(users.parentId, parentId));
+  }
+
+  async getFamilyByUserId(userId: string): Promise<Family | undefined> {
+    const [membership] = await db.select({
+      family: families
+    })
+    .from(familyMemberships)
+    .innerJoin(families, eq(familyMemberships.familyId, families.id))
+    .where(eq(familyMemberships.userId, userId));
+    
+    return membership?.family;
+  }
+
+  async getFamilyMembers(familyId: string): Promise<(FamilyMembership & { user: User })[]> {
+    return await db.query.familyMemberships.findMany({
+      where: eq(familyMemberships.familyId, familyId),
+      with: {
+        user: true
+      }
+    });
+  }
+
+  async getFamilyParents(familyId: string): Promise<(FamilyMembership & { user: User })[]> {
+    return await db.query.familyMemberships.findMany({
+      where: and(
+        eq(familyMemberships.familyId, familyId),
+        inArray(familyMemberships.role, ['admin', 'collaborator'])
+      ),
+      with: {
+        user: true
+      }
+    });
+  }
+
+  async getUserFamilyRole(userId: string): Promise<string | undefined> {
+    const [membership] = await db.select()
+      .from(familyMemberships)
+      .where(eq(familyMemberships.userId, userId));
+    
+    return membership?.role;
+  }
+
+  async createFamily(name: string, adminUserId: string): Promise<Family> {
+    const [family] = await db.insert(families)
+      .values({ name })
+      .returning();
+    
+    // Add the creator as an admin
+    await db.insert(familyMemberships)
+      .values({
+        familyId: family.id,
+        userId: adminUserId,
+        role: 'admin'
+      });
+    
+    return family;
+  }
+
+  async addFamilyMember(familyId: string, userId: string, role: string): Promise<FamilyMembership> {
+    const [membership] = await db.insert(familyMemberships)
+      .values({
+        familyId,
+        userId,
+        role
+      })
+      .returning();
+    
+    return membership;
+  }
+
+  async removeFamilyMember(familyId: string, userId: string): Promise<void> {
+    await db.delete(familyMemberships)
+      .where(and(
+        eq(familyMemberships.familyId, familyId),
+        eq(familyMemberships.userId, userId)
+      ));
+  }
+
+  async updateFamilyMemberRole(familyId: string, userId: string, newRole: string): Promise<void> {
+    await db.update(familyMemberships)
+      .set({ role: newRole })
+      .where(and(
+        eq(familyMemberships.familyId, familyId),
+        eq(familyMemberships.userId, userId)
+      ));
   }
 
   // Task operations
@@ -324,33 +421,41 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createFamilyInvitation(parentId: string, childEmail: string): Promise<FamilyInvitation> {
+  async createFamilyInvitation(familyId: string, invitedByUserId: string, inviteeEmail: string, inviteeRole: string): Promise<FamilyInvitation> {
     const [invitation] = await db.insert(familyInvitations)
-      .values({ parentId, childEmail })
+      .values({ familyId, invitedByUserId, inviteeEmail, inviteeRole })
       .returning();
     return invitation;
   }
 
   async getInvitationsByEmail(email: string): Promise<FamilyInvitation[]> {
-    return await db.select().from(familyInvitations)
-      .where(and(
-        eq(familyInvitations.childEmail, email),
+    return await db.query.familyInvitations.findMany({
+      where: and(
+        eq(familyInvitations.inviteeEmail, email),
         eq(familyInvitations.status, "pending")
-      ))
-      .orderBy(desc(familyInvitations.createdAt));
+      ),
+      with: {
+        family: true,
+        invitedBy: true
+      },
+      orderBy: desc(familyInvitations.createdAt)
+    });
   }
 
   async getInvitationById(id: string): Promise<FamilyInvitation | undefined> {
-    const [invitation] = await db.select().from(familyInvitations)
-      .where(eq(familyInvitations.id, id));
+    const invitation = await db.query.familyInvitations.findFirst({
+      where: eq(familyInvitations.id, id),
+      with: {
+        family: true,
+        invitedBy: true
+      }
+    });
     return invitation;
   }
 
-  async acceptInvitation(invitationId: string, childId: string): Promise<void> {
+  async acceptInvitation(invitationId: string, userId: string): Promise<void> {
     // Get the invitation first
-    const [invitation] = await db.select().from(familyInvitations)
-      .where(eq(familyInvitations.id, invitationId));
-    
+    const invitation = await this.getInvitationById(invitationId);
     if (!invitation) return;
 
     // Update invitation status
@@ -358,10 +463,20 @@ export class DatabaseStorage implements IStorage {
       .set({ status: "accepted", acceptedAt: new Date() })
       .where(eq(familyInvitations.id, invitationId));
 
-    // Update child's parentId
-    await db.update(users)
-      .set({ parentId: invitation.parentId, updatedAt: new Date() })
-      .where(eq(users.id, childId));
+    // Add user to family with the specified role
+    await this.addFamilyMember(invitation.familyId, userId, invitation.inviteeRole);
+
+    // If it's a child, also update the legacy parentId field for backward compatibility
+    if (invitation.inviteeRole === 'child') {
+      // Find the family admin to set as parent
+      const familyParents = await this.getFamilyParents(invitation.familyId);
+      const admin = familyParents.find(p => p.role === 'admin');
+      if (admin) {
+        await db.update(users)
+          .set({ parentId: admin.userId, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      }
+    }
   }
 
   async rejectInvitation(invitationId: string): Promise<void> {

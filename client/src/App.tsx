@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import RoleSelection from "@/pages/role-selection";
+import FamilyManagement from "@/pages/family-management";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -21,6 +22,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/family" component={FamilyManagement} />
         </>
       )}
       <Route component={NotFound} />

@@ -29,6 +29,12 @@
 - Improved task submission display to show unit quantities and better formatting
 - Added "Marcar todas como leídas" button to notification panel
 - **CRITICAL**: Removed all currency conversion logic - amounts are stored and displayed as whole numbers (ARS) without cents conversion
+- **NEW**: Implemented multi-parent family system with role-based permissions (Administrador/Colaborador)
+- **NEW**: Added families and family_memberships database tables for scalable family management
+- **NEW**: Enhanced invitation system to support parent-to-parent invitations with role specification
+- **NEW**: Created comprehensive family management interface with member role management
+- **NEW**: Only Administrador parents can remove family members and change roles
+- **NEW**: Added family management page accessible via "Gestionar Familia" button in parent dashboard
 
 # User Preferences
 
