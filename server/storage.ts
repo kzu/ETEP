@@ -448,6 +448,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notifications.createdAt));
   }
 
+  async getNotificationsByUserWithoutFamily(userId: string): Promise<Notification[]> {
+    return await db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsReadWithoutFamily(notificationId: string, userId: string): Promise<void> {
+    // Delete the notification only if it belongs to the user
+    await db.delete(notifications)
+      .where(and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, userId)
+      ));
+  }
+
+  async markAllNotificationsAsReadWithoutFamily(userId: string): Promise<void> {
+    // Delete all notifications for the user
+    await db.delete(notifications)
+      .where(eq(notifications.userId, userId));
+  }
+
   async markNotificationAsRead(notificationId: string, familyId: string): Promise<void> {
     // Delete the notification instead of just marking as read
     await db.delete(notifications)

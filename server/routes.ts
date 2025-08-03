@@ -18,8 +18,6 @@ async function getUserFamilyId(userId: string): Promise<string | null> {
 // Helper function to broadcast notification to user
 function broadcastNotificationToUser(userId: string, notification: any) {
   const connections = userConnections.get(userId);
-  console.log(`Broadcasting notification to user ${userId}: found ${connections?.length || 0} connections`);
-  console.log(`Notification data:`, notification);
   if (connections) {
     const message = JSON.stringify({
       type: 'notification',
@@ -27,12 +25,9 @@ function broadcastNotificationToUser(userId: string, notification: any) {
     });
     connections.forEach(ws => {
       if (ws.readyState === WebSocket.OPEN) {
-        console.log(`Sending notification to WebSocket connection`);
         ws.send(message);
       }
     });
-  } else {
-    console.log(`No WebSocket connections found for user ${userId}`);
   }
 }
 
@@ -510,7 +505,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
-        return res.json([]); // Return empty array if not part of any family
+        // For users not in a family, get notifications without familyId filter
+        const notifications = await storage.getNotificationsByUserWithoutFamily(userId);
+        return res.json(notifications);
       }
       
       const notifications = await storage.getNotificationsByUser(userId, familyId);
@@ -528,7 +525,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
-        return res.status(400).json({ message: "User not part of any family" });
+        // For users not in a family, mark notification as read without familyId check
+        await storage.markNotificationAsReadWithoutFamily(id, userId);
+        return res.json({ success: true });
       }
       
       await storage.markNotificationAsRead(id, familyId);
@@ -545,7 +544,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
-        return res.status(400).json({ message: "User not part of any family" });
+        // For users not in a family, mark all notifications as read for that user
+        await storage.markAllNotificationsAsReadWithoutFamily(userId);
+        return res.json({ success: true });
       }
       
       await storage.markAllNotificationsAsRead(userId, familyId);

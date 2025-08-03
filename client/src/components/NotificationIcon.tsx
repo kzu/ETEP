@@ -88,7 +88,6 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'notification') {
-        console.log('Received notification:', data.data);
         // Refetch notifications when new one arrives
         refetch();
         
