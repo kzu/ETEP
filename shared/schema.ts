@@ -61,10 +61,16 @@ export const tasks = pgTable("tasks", {
 
 export const taskSubmissions = pgTable("task_submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id),
+  familyId: varchar("family_id").notNull().references(() => families.id),
+  taskId: varchar("task_id").notNull(), // No foreign key - just stores original task ID for reference
   submittedById: varchar("submitted_by_id").notNull().references(() => users.id),
+  // Copy of task data at submission time - this allows task templates to be modified without affecting past submissions
+  taskTitle: text("task_title").notNull(), // Copy of task title when submitted
+  taskDescription: text("task_description"), // Copy of task description when submitted
+  taskType: taskTypeEnum("task_type").notNull(), // Copy of task type when submitted
+  paymentAmountPerUnit: integer("payment_amount_per_unit").notNull(), // Copy of payment amount per unit when submitted
   units: integer("units").default(1), // number of units completed for recurring tasks
-  totalAmount: integer("total_amount").notNull(), // calculated amount in cents
+  totalAmount: integer("total_amount").notNull(), // calculated amount in cents (units * paymentAmountPerUnit)
   status: taskStatusEnum("status").notNull().default("submitted"),
   submittedAt: timestamp("submitted_at").defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
@@ -161,21 +167,18 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
 }));
 
-export const tasksRelations = relations(tasks, ({ one, many }) => ({
+export const tasksRelations = relations(tasks, ({ one }) => ({
   // assignedTo: many-to-many relationship is now handled via assignedToIds array
   createdBy: one(users, {
     fields: [tasks.createdById],
     references: [users.id],
     relationName: "task_creator"
   }),
-  submissions: many(taskSubmissions),
+  // Note: No relation to submissions - tasks serve as templates only
 }));
 
 export const taskSubmissionsRelations = relations(taskSubmissions, ({ one }) => ({
-  task: one(tasks, {
-    fields: [taskSubmissions.taskId],
-    references: [tasks.id],
-  }),
+  // Note: No relation to tasks table - taskId is just a reference, not a foreign key
   submittedBy: one(users, {
     fields: [taskSubmissions.submittedById],
     references: [users.id],

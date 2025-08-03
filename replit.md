@@ -37,6 +37,10 @@
 - **NEW**: Added family management page accessible via "Gestionar Familia" button in parent dashboard
 - **UPDATED**: Colaborador (Collaborator) role now has full administrative permissions for all family operations except removing administrators from the family
 - **UPDATED**: Collaborators can now invite children, create and manage tasks, approve/reject task submissions, manage payments, and receive real-time notifications about task activities
+- **CRITICAL ARCHITECTURE CHANGE**: Removed foreign key constraint between task_submissions and tasks tables (January 3, 2025)
+- **NEW SUBMISSION MODEL**: Task submissions now copy task data (title, description, type, payment amount) at submission time
+- **TEMPLATE SYSTEM**: Tasks now serve exclusively as templates - modifications to tasks don't affect past submissions
+- **PAYMENT PRESERVATION**: Historical submissions maintain their original payment amounts even when task templates are updated
 
 # User Preferences
 
@@ -67,11 +71,12 @@ Currency: All amounts are in ARS (Argentine Pesos) as whole numbers - never conv
 - **Schema Management**: Drizzle Kit for migrations and schema synchronization
 - **Key Tables**:
   - Users (parents and children with role-based access, role nullable for new users)
-  - Tasks (one-time and recurring with status tracking)
-  - Task submissions (approval workflow)
+  - Tasks (serve as templates only - no foreign key relationship to submissions)
+  - Task submissions (copy task data at submission time, independent of tasks table)
   - Balances (accumulated and pending earnings)
   - Payments and notifications
   - Family invitations (parent-child relationship establishment)
+  - Families and family_memberships (multi-parent support with role-based access)
 
 ## Authentication & Authorization
 - **Provider**: Replit's OpenID Connect service

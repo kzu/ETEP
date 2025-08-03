@@ -379,9 +379,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only children can submit tasks" });
       }
       
+      // Get the original task to copy its data
+      const originalTask = await storage.getTaskById(req.body.taskId, familyId);
+      if (!originalTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
       const validatedData = insertTaskSubmissionSchema.parse({
+        familyId,
         taskId: req.body.taskId,
         submittedById: userId,
+        // Copy task data at submission time
+        taskTitle: originalTask.title,
+        taskDescription: originalTask.description,
+        taskType: originalTask.type,
+        paymentAmountPerUnit: originalTask.paymentAmount,
         units: req.body.units || 1,
         totalAmount: req.body.totalAmount // amount already in cents from frontend
       });

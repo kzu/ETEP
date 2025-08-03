@@ -215,13 +215,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getUserFamilyRole(userId: string): Promise<string | undefined> {
-    const [membership] = await db.select()
-      .from(familyMemberships)
-      .where(eq(familyMemberships.userId, userId));
-    
-    return membership?.role;
-  }
+
 
   async createFamily(name: string, adminUserId: string): Promise<Family> {
     const [family] = await db.insert(families)
@@ -346,11 +340,13 @@ export class DatabaseStorage implements IStorage {
 
   async getTaskSubmissionsByUser(userId: string, familyId: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: eq(taskSubmissions.submittedById, userId),
+      where: and(
+        eq(taskSubmissions.submittedById, userId),
+        eq(taskSubmissions.familyId, familyId)
+      ),
       with: {
-        task: {
-          where: eq(tasks.familyId, familyId)
-        }
+        submittedBy: true,
+        reviewedBy: true
       },
       orderBy: desc(taskSubmissions.submittedAt)
     });
@@ -358,22 +354,26 @@ export class DatabaseStorage implements IStorage {
 
   async getTaskSubmissionsByTask(taskId: string, familyId: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: eq(taskSubmissions.taskId, taskId),
+      where: and(
+        eq(taskSubmissions.taskId, taskId),
+        eq(taskSubmissions.familyId, familyId)
+      ),
       with: {
-        task: {
-          where: eq(tasks.familyId, familyId)
-        }
+        submittedBy: true,
+        reviewedBy: true
       }
     });
   }
 
   async getTaskSubmissionById(submissionId: string, familyId: string): Promise<TaskSubmission | undefined> {
     const submission = await db.query.taskSubmissions.findFirst({
-      where: eq(taskSubmissions.id, submissionId),
+      where: and(
+        eq(taskSubmissions.id, submissionId),
+        eq(taskSubmissions.familyId, familyId)
+      ),
       with: {
-        task: {
-          where: eq(tasks.familyId, familyId)
-        }
+        submittedBy: true,
+        reviewedBy: true
       }
     });
     return submission;
@@ -381,12 +381,12 @@ export class DatabaseStorage implements IStorage {
 
   async getPendingTaskSubmissions(familyId: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: eq(taskSubmissions.status, "submitted"),
+      where: and(
+        eq(taskSubmissions.status, "submitted"),
+        eq(taskSubmissions.familyId, familyId)
+      ),
       with: {
         submittedBy: true,
-        task: {
-          where: eq(tasks.familyId, familyId)
-        },
         reviewedBy: true
       },
       orderBy: desc(taskSubmissions.submittedAt)
@@ -395,12 +395,12 @@ export class DatabaseStorage implements IStorage {
 
   async getTaskSubmissionsByStatus(familyId: string, status: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: eq(taskSubmissions.status, status as any),
+      where: and(
+        eq(taskSubmissions.status, status as any),
+        eq(taskSubmissions.familyId, familyId)
+      ),
       with: {
         submittedBy: true,
-        task: {
-          where: eq(tasks.familyId, familyId)
-        },
         reviewedBy: true
       },
       orderBy: desc(taskSubmissions.reviewedAt)
