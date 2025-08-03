@@ -48,7 +48,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   type: taskTypeEnum("type").notNull(),
-  paymentAmount: integer("payment_amount").notNull(), // in cents
+  paymentAmount: integer("payment_amount").notNull(), // in cents (for recurring tasks: price per 30-minute block)
   assignedToId: varchar("assigned_to_id").notNull().references(() => users.id),
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   status: taskStatusEnum("status").notNull().default("available"),

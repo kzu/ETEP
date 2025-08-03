@@ -634,19 +634,25 @@ export default function Home() {
                         {task.type === 'recurring' && (
                           <div className="bg-gray-50 rounded-lg p-3 mb-3">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700">Tiempo de sesión:</span>
+                              <span className="text-sm font-medium text-gray-700">Bloques de tiempo:</span>
                               <div className="flex items-center space-x-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="w-8 h-8 p-0"
                                   onClick={() => updateSessionTime(task.id, -30)}
+                                  disabled={getSessionTime(task.id) <= 30}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </Button>
-                                <span className="text-lg font-bold text-gray-900 w-16 text-center">
-                                  {formatTime(getSessionTime(task.id))}
-                                </span>
+                                <div className="text-center">
+                                  <div className="text-lg font-bold text-gray-900">
+                                    {getSessionTime(task.id) / 30} bloque{getSessionTime(task.id) > 30 ? 's' : ''}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {formatTime(getSessionTime(task.id))}
+                                  </div>
+                                </div>
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -658,10 +664,13 @@ export default function Home() {
                               </div>
                             </div>
                             <div className="text-center">
-                              <span className="text-sm text-gray-600">Ganarás: </span>
+                              <span className="text-sm text-gray-600">Total a ganar: </span>
                               <span className="font-bold text-accent">
                                 {formatCurrency((task.paymentAmount * getSessionTime(task.id)) / 30)}
                               </span>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatCurrency(task.paymentAmount)} × {getSessionTime(task.id) / 30} bloque{getSessionTime(task.id) > 30 ? 's' : ''}
+                              </div>
                             </div>
                           </div>
                         )}

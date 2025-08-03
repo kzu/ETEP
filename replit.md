@@ -12,6 +12,8 @@
 - Enhanced notification management with mark-as-read functionality (✓ icon)
 - Added accept/reject actions for family invitations with parent notifications
 - Real-time family updates when invitations are accepted or rejected
+- Enhanced time-block system for recurring tasks with clear block visualization
+- Improved payment calculation display showing price per block and total amount
 
 # User Preferences
 
