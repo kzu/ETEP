@@ -113,14 +113,9 @@ export default function Home() {
     queryKey: ["/api/notifications"],
   });
 
-  // Child task submissions history for Historial tab
-  const { data: childApprovedSubmissions, isLoading: childApprovedLoading } = useQuery({
-    queryKey: ["/api/task-submissions/approved"],
-    enabled: isChild,
-  });
-
-  const { data: childRejectedSubmissions, isLoading: childRejectedLoading } = useQuery({
-    queryKey: ["/api/task-submissions/rejected"],
+  // Child task submissions history for Historial tab (unified)
+  const { data: childSubmissionHistory, isLoading: childHistoryLoading } = useQuery({
+    queryKey: ["/api/task-submissions/history"],
     enabled: isChild,
   });
 
@@ -931,68 +926,44 @@ export default function Home() {
                   <Card className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-6">Historial de Tareas</h3>
                     
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="aprobadas">
-                          <span>Aprobadas</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="rechazadas">
-                          <span>Rechazadas</span>
-                        </TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="aprobadas" className="mt-6 space-y-4">
-                        {childApprovedLoading ? (
-                          Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
-                        ) : !childApprovedSubmissions || childApprovedSubmissions.length === 0 ? (
-                          <p className="text-gray-500 text-center py-8">No hay tareas aprobadas</p>
-                        ) : (
-                          childApprovedSubmissions.map((submission: any) => (
-                            <div key={submission.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
-                              <div className="flex justify-between items-start mb-3">
-                                <div>
-                                  <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
-                                  <p className="text-sm text-gray-600">
-                                    {submission.units > 1 && `${submission.units} unidades • `}
-                                    {new Date(submission.submittedAt).toLocaleDateString('es-ES')}
-                                  </p>
-                                  <p className="text-sm text-green-600 font-medium">✓ Aprobada</p>
-                                </div>
-                                <span className="text-lg font-bold text-green-600">
-                                  {formatCurrency(submission.totalAmount)}
-                                </span>
+                    <div className="space-y-4">
+                      {childHistoryLoading ? (
+                        Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
+                      ) : !childSubmissionHistory || childSubmissionHistory.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">No hay historial de tareas</p>
+                      ) : (
+                        childSubmissionHistory.map((submission: any) => (
+                          <div 
+                            key={submission.id} 
+                            className={`border rounded-lg p-4 ${
+                              submission.status === 'approved' 
+                                ? 'border-green-200 bg-green-50' 
+                                : 'border-red-200 bg-red-50'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-medium text-gray-900">{submission.taskTitle || 'Tarea completada'}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {submission.units > 1 && `${submission.units} unidades • `}
+                                  {new Date(submission.reviewedAt || submission.submittedAt).toLocaleDateString('es-ES')}
+                                </p>
+                                <p className={`text-sm font-medium ${
+                                  submission.status === 'approved' ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {submission.status === 'approved' ? '✓ Aprobada' : '✗ Rechazada'}
+                                </p>
                               </div>
+                              <span className={`text-lg font-bold ${
+                                submission.status === 'approved' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {formatCurrency(submission.totalAmount)}
+                              </span>
                             </div>
-                          ))
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="rechazadas" className="mt-6 space-y-4">
-                        {childRejectedLoading ? (
-                          Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
-                        ) : !childRejectedSubmissions || childRejectedSubmissions.length === 0 ? (
-                          <p className="text-gray-500 text-center py-8">No hay tareas rechazadas</p>
-                        ) : (
-                          childRejectedSubmissions.map((submission: any) => (
-                            <div key={submission.id} className="border border-red-200 bg-red-50 rounded-lg p-4">
-                              <div className="flex justify-between items-start mb-3">
-                                <div>
-                                  <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
-                                  <p className="text-sm text-gray-600">
-                                    {submission.units > 1 && `${submission.units} unidades • `}
-                                    {new Date(submission.submittedAt).toLocaleDateString('es-ES')}
-                                  </p>
-                                  <p className="text-sm text-red-600 font-medium">✗ Rechazada</p>
-                                </div>
-                                <span className="text-lg font-bold text-red-600">
-                                  {formatCurrency(submission.totalAmount)}
-                                </span>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </TabsContent>
-                    </Tabs>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </Card>
                 </div>
               )}

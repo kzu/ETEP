@@ -417,8 +417,7 @@ export class DatabaseStorage implements IStorage {
       ),
       with: {
         submittedBy: true,
-        reviewedBy: true,
-        task: true
+        reviewedBy: true
       },
       orderBy: desc(taskSubmissions.reviewedAt)
     });

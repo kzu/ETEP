@@ -517,6 +517,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint for child history (unified approved + rejected)
+  app.get('/api/task-submissions/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      // Only children can access this endpoint
+      if (!user || userFamilyRole !== 'child') {
+        return res.status(403).json({ message: "Only children can access submission history" });
+      }
+      
+      // Get both approved and rejected submissions for the child
+      const [approvedSubmissions, rejectedSubmissions] = await Promise.all([
+        storage.getTaskSubmissionsByStatusAndUser(familyId, 'approved', userId),
+        storage.getTaskSubmissionsByStatusAndUser(familyId, 'rejected', userId)
+      ]);
+      
+      // Combine and sort by review date
+      const allSubmissions = [...approvedSubmissions, ...rejectedSubmissions]
+        .sort((a, b) => new Date(b.reviewedAt || b.submittedAt).getTime() - new Date(a.reviewedAt || a.submittedAt).getTime());
+      
+      res.json(allSubmissions);
+    } catch (error) {
+      console.error("Error fetching submission history:", error);
+      res.status(500).json({ message: "Failed to fetch submission history" });
+    }
+  });
+
   app.patch('/api/task-submissions/:id/:action', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
