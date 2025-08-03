@@ -572,15 +572,15 @@ export default function Home() {
                           <div className="flex-1">
                             <p className="text-sm text-gray-900">
                               <span className="font-medium">{submission.task?.title || 'Tarea completada'}</span>
+                              {submission.units > 1 && ` x${submission.units}`}
                               {' '}by{' '}
-                              <span className="font-medium">{submission.submittedBy?.firstName || submission.submittedBy?.email}</span>
-                              {submission.units > 1 && ` (x${submission.units})`}
+                              {submission.submittedBy?.firstName || submission.submittedBy?.email}
                               {' '}approved{' '}
                               <span className="text-gray-600">{new Date(submission.reviewedAt).toLocaleDateString('es-ES')}</span>
                               {submission.reviewedBy && (
                                 <>
                                   {' '}by{' '}
-                                  <span className="font-medium">{submission.reviewedBy?.firstName || submission.reviewedBy?.email}</span>
+                                  {submission.reviewedBy?.firstName || submission.reviewedBy?.email}
                                 </>
                               )}
                             </p>
@@ -606,15 +606,15 @@ export default function Home() {
                           <div className="flex-1">
                             <p className="text-sm text-gray-900">
                               <span className="font-medium">{submission.task?.title || 'Tarea completada'}</span>
+                              {submission.units > 1 && ` x${submission.units}`}
                               {' '}by{' '}
-                              <span className="font-medium">{submission.submittedBy?.firstName || submission.submittedBy?.email}</span>
-                              {submission.units > 1 && ` (x${submission.units})`}
+                              {submission.submittedBy?.firstName || submission.submittedBy?.email}
                               {' '}rejected{' '}
                               <span className="text-gray-600">{new Date(submission.reviewedAt).toLocaleDateString('es-ES')}</span>
                               {submission.reviewedBy && (
                                 <>
                                   {' '}by{' '}
-                                  <span className="font-medium">{submission.reviewedBy?.firstName || submission.reviewedBy?.email}</span>
+                                  {submission.reviewedBy?.firstName || submission.reviewedBy?.email}
                                 </>
                               )}
                             </p>
