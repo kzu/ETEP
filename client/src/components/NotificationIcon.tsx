@@ -110,6 +110,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
         if (data.data?.type === 'family_invitation') {
           queryClient.invalidateQueries({ queryKey: ["/api/family-invitations"] });
         }
+        
+        // If it's a family removal notification, refresh user data to trigger redirect
+        if (data.data?.type === 'family_removal') {
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
       }
     };
 
