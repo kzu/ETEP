@@ -38,9 +38,11 @@ export interface IStorage {
   // Family operations
   getChildren(parentId: string): Promise<User[]>;
   getFamilyByUserId(userId: string): Promise<Family | undefined>;
+  getFamilyById(familyId: string): Promise<Family | undefined>;
   getFamilyMembers(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
   getFamilyParents(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
   getUserFamilyRole(userId: string): Promise<string | undefined>;
+  getUserFamilyMemberships(userId: string): Promise<FamilyMembership[]>;
   createFamily(name: string, adminUserId: string): Promise<Family>;
   addFamilyMember(familyId: string, userId: string, role: string): Promise<FamilyMembership>;
   removeFamilyMember(familyId: string, userId: string): Promise<void>;
@@ -81,8 +83,7 @@ export interface IStorage {
   markNotificationAsRead(notificationId: string, familyId: string): Promise<void>;
   markAllNotificationsAsRead(userId: string, familyId: string): Promise<void>;
   
-  // Role and family operations
-  updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
+  // Family invitation operations
   createFamilyInvitation(familyId: string, invitedByUserId: string, inviteeEmail: string, inviteeRole: string): Promise<FamilyInvitation>;
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
@@ -152,6 +153,17 @@ export class DatabaseStorage implements IStorage {
     .where(eq(familyMemberships.userId, userId));
     
     return membership?.family;
+  }
+
+  async getFamilyById(familyId: string): Promise<Family | undefined> {
+    const [family] = await db.select().from(families).where(eq(families.id, familyId));
+    return family;
+  }
+
+  async getUserFamilyMemberships(userId: string): Promise<FamilyMembership[]> {
+    return await db.select().from(familyMemberships)
+      .where(eq(familyMemberships.userId, userId))
+      .orderBy(familyMemberships.joinedAt);
   }
 
   async getFamilyMembers(familyId: string): Promise<(FamilyMembership & { user: User })[]> {
@@ -487,24 +499,7 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
-  // Role and family operations
-  async updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User> {
-    const updateData: any = { role: roleData.role, updatedAt: new Date() };
-    
-    // If it's a child joining a family, find parent by email
-    if (roleData.role === 'child' && roleData.parentEmail) {
-      const [parent] = await db.select().from(users).where(eq(users.email, roleData.parentEmail));
-      if (parent) {
-        updateData.parentId = parent.id;
-      }
-    }
-    
-    const [user] = await db.update(users)
-      .set(updateData)
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
+  // Family invitation operations
 
   async createFamilyInvitation(familyId: string, invitedByUserId: string, inviteeEmail: string, inviteeRole: string): Promise<FamilyInvitation> {
     const [invitation] = await db.insert(familyInvitations)

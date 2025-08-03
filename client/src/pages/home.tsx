@@ -60,42 +60,48 @@ export default function Home() {
     }
   }, [user, authLoading, toast]);
 
-  // Auto-set view based on user role
+  // Auto-set view based on user role in current family
   useEffect(() => {
-    if (user?.role) {
-      setCurrentView(user.role as 'parent' | 'child');
+    if ((user as any)?.currentFamilyRole) {
+      const role = (user as any).currentFamilyRole;
+      setCurrentView(role === 'child' ? 'child' : 'parent');
     }
   }, [user]);
+
+  // Get current family role for query enabling
+  const currentFamilyRole = (user as any)?.currentFamilyRole;
+  const isParent = currentFamilyRole && currentFamilyRole !== 'child';
+  const isChild = currentFamilyRole === 'child';
 
   // Queries
   const { data: children, isLoading: childrenLoading } = useQuery({
     queryKey: ["/api/children"],
-    enabled: user?.role === 'parent',
+    enabled: isParent,
   });
 
   const { data: assignedTasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["/api/tasks/assigned"],
-    enabled: user?.role === 'child',
+    enabled: isChild,
   });
 
   const { data: pendingSubmissions, isLoading: submissionsLoading } = useQuery({
     queryKey: ["/api/task-submissions/pending"],
-    enabled: user?.role === 'parent',
+    enabled: isParent,
   });
 
   const { data: approvedSubmissions, isLoading: approvedLoading } = useQuery({
     queryKey: ["/api/task-submissions/approved"],
-    enabled: user?.role === 'parent',
+    enabled: isParent,
   });
 
   const { data: rejectedSubmissions, isLoading: rejectedLoading } = useQuery({
     queryKey: ["/api/task-submissions/rejected"],
-    enabled: user?.role === 'parent',
+    enabled: isParent,
   });
 
   const { data: createdTasks, isLoading: createdTasksLoading } = useQuery({
     queryKey: ["/api/tasks"],
-    enabled: user?.role === 'parent',
+    enabled: isParent,
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery({

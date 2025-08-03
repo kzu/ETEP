@@ -65,19 +65,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Get user's family ID
-      const familyId = await getUserFamilyId(userId);
+      // Get user's family memberships with roles
+      const familyMemberships = await storage.getUserFamilyMemberships(userId);
       
-      // If user belongs to a family, ensure they have a balance record
+      // For now, use the first family as the current family (later we can add family switching)
+      const currentFamilyMembership = familyMemberships[0];
       let balance = null;
-      if (familyId) {
+      let currentFamily = null;
+      
+      if (currentFamilyMembership) {
+        const familyId = currentFamilyMembership.familyId;
+        currentFamily = await storage.getFamilyById(familyId);
         balance = await storage.getBalance(userId, familyId);
         if (!balance) {
           balance = await storage.createBalance(userId, familyId);
         }
       }
       
-      res.json({ ...user, balance, familyId, hasFamily: !!familyId });
+      res.json({ 
+        ...user, 
+        balance, 
+        currentFamily,
+        currentFamilyRole: currentFamilyMembership?.role,
+        familyMemberships,
+        hasFamily: familyMemberships.length > 0
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -718,8 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.acceptInvitation(id, userId);
       
-      // Update user role based on invitation role
-      await storage.updateUserRole(userId, { role: invitation.inviteeRole === 'child' ? 'child' : 'parent' });
+      // No need to update global user role anymore, role is now family-specific
       
       // Create balance if the user becomes a child
       if (invitation.inviteeRole === 'child') {

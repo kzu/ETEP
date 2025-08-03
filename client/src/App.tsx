@@ -18,7 +18,7 @@ function Router() {
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
-      ) : !user || !(user as any)?.role || !(user as any)?.hasFamily ? (
+      ) : !user || !(user as any)?.hasFamily ? (
         <>
           <Route path="/" component={RoleSelection} />
           <Route path="/parent-onboarding" component={ParentOnboarding} />
