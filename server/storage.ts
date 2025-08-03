@@ -190,12 +190,18 @@ export class DatabaseStorage implements IStorage {
     
     if (childIds.length === 0) return [];
 
-    return await db.select().from(taskSubmissions)
-      .where(and(
+    return await db.query.taskSubmissions.findMany({
+      where: and(
         inArray(taskSubmissions.submittedById, childIds),
         eq(taskSubmissions.status, "submitted")
-      ))
-      .orderBy(desc(taskSubmissions.submittedAt));
+      ),
+      with: {
+        submittedBy: true,
+        task: true,
+        reviewedBy: true
+      },
+      orderBy: desc(taskSubmissions.submittedAt)
+    });
   }
 
   async getTaskSubmissionsByStatus(parentId: string, status: string): Promise<TaskSubmission[]> {
@@ -205,12 +211,18 @@ export class DatabaseStorage implements IStorage {
     
     if (childIds.length === 0) return [];
 
-    return await db.select().from(taskSubmissions)
-      .where(and(
+    return await db.query.taskSubmissions.findMany({
+      where: and(
         inArray(taskSubmissions.submittedById, childIds),
         eq(taskSubmissions.status, status as any)
-      ))
-      .orderBy(desc(taskSubmissions.reviewedAt));
+      ),
+      with: {
+        submittedBy: true,
+        task: true,
+        reviewedBy: true
+      },
+      orderBy: desc(taskSubmissions.reviewedAt)
+    });
   }
 
   async updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void> {
