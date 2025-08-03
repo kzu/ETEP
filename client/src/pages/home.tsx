@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Coins, 
   CreditCard, 
@@ -107,6 +108,10 @@ export default function Home() {
   
   // Task creation modal state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  
+  // Task management state
+  const [activeTab, setActiveTab] = useState("disponibles");
+  const [editingTask, setEditingTask] = useState<any>(null);
 
   // Mutations
   const createTaskMutation = useMutation({
@@ -164,10 +169,18 @@ export default function Home() {
     mutationFn: async ({ submissionId, action }: { submissionId: string, action: 'approve' | 'reject' }) => {
       await apiRequest('PATCH', `/api/task-submissions/${submissionId}/${action}`, {});
     },
-    onSuccess: () => {
-      toast({ title: "Éxito", description: "Tarea revisada" });
+    onSuccess: (_, { action }) => {
+      toast({ title: "Éxito", description: "Tarea revisada exitosamente" });
       queryClient.invalidateQueries({ queryKey: ["/api/task-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      
+      // Auto-switch to the appropriate tab
+      if (action === 'approve') {
+        setActiveTab("aprobadas");
+      } else {
+        setActiveTab("rechazadas");
+      }
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -262,6 +275,15 @@ export default function Home() {
   };
 
   const getSessionUnits = (taskId: string) => sessionUnits[taskId] || 1;
+
+  // Helper functions for task filtering
+  const getTaskSubmissionsByStatus = (status: string) => {
+    return pendingSubmissions?.filter((submission: any) => submission.status === status) || [];
+  };
+
+  const countTasksByStatus = (status: string) => {
+    return getTaskSubmissionsByStatus(status).length;
+  };
 
   if (authLoading || !user) {
     return (
@@ -413,28 +435,50 @@ export default function Home() {
               )}
             </div>
 
-            {/* Task Management */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Pending Approvals */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Tareas Pendientes de Aprobación</h3>
-                  <Badge variant="secondary">{pendingSubmissions?.length || 0}</Badge>
-                </div>
-                
-                <div className="space-y-4">
+            {/* Task Management with Tabs */}
+            <Card className="p-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="pendientes" className="flex items-center space-x-2">
+                    <span>Pendientes</span>
+                    <Badge variant="secondary" className="ml-1">
+                      {countTasksByStatus('submitted')}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="aprobadas" className="flex items-center space-x-2">
+                    <span>Aprobadas</span>
+                    <Badge variant="secondary" className="ml-1">
+                      {countTasksByStatus('approved')}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="rechazadas" className="flex items-center space-x-2">
+                    <span>Rechazadas</span>
+                    <Badge variant="secondary" className="ml-1">
+                      {countTasksByStatus('rejected')}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="disponibles" className="flex items-center space-x-2">
+                    <span>Disponibles</span>
+                    <Badge variant="secondary" className="ml-1">
+                      {createdTasks?.length || 0}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="pendientes" className="mt-6 space-y-4">
                   {submissionsLoading ? (
                     Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
-                  ) : pendingSubmissions?.length === 0 ? (
+                  ) : getTaskSubmissionsByStatus('submitted').length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No hay tareas pendientes</p>
                   ) : (
-                    pendingSubmissions?.map((submission: any) => (
+                    getTaskSubmissionsByStatus('submitted').map((submission: any) => (
                       <div key={submission.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h4 className="font-medium text-gray-900">Tarea completada</h4>
-                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName}</p>
+                            <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
+                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName || submission.submittedBy?.email}</p>
                             <p className="text-sm text-gray-500">
+                              {submission.units > 1 && `${submission.units} unidades • `}
                               {new Date(submission.submittedAt).toLocaleDateString('es-ES')}
                             </p>
                           </div>
@@ -446,7 +490,7 @@ export default function Home() {
                         <div className="flex space-x-2">
                           <Button 
                             size="sm" 
-                            className="flex-1 bg-secondary hover:bg-green-600"
+                            className="flex-1 bg-green-600 hover:bg-green-700"
                             onClick={() => reviewTaskMutation.mutate({ 
                               submissionId: submission.id, 
                               action: 'approve' 
@@ -471,83 +515,150 @@ export default function Home() {
                       </div>
                     ))
                   )}
-                </div>
-              </Card>
+                </TabsContent>
 
-              {/* Create Task */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Tareas Disponibles</h3>
-                  <Button 
-                    onClick={() => setShowCreateTaskModal(true)}
-                    size="sm"
-                    className="flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Nueva Tarea</span>
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {createdTasksLoading ? (
-                    Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-20" />)
-                  ) : !createdTasks?.length ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <ListTodo className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                      <p>No hay tareas creadas</p>
-                      <p className="text-sm">Haz clic en "Nueva Tarea" para crear una</p>
-                    </div>
+                <TabsContent value="aprobadas" className="mt-6 space-y-4">
+                  {getTaskSubmissionsByStatus('approved').length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No hay tareas aprobadas</p>
                   ) : (
-                    createdTasks?.map((task: any) => {
-                      const assignedChildren = task.assignedToIds?.length > 0 
-                        ? children?.filter((child: any) => task.assignedToIds.includes(child.id)) || []
-                        : [];
-                      
-                      const assignmentText = task.assignedToIds?.length === 0 || !task.assignedToIds
-                        ? 'Disponible para todos'
-                        : assignedChildren.map(child => child.firstName || child.email).join(', ');
-                      
-                      return (
-                        <div 
-                          key={task.id} 
-                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">{task.title}</h4>
-                                <p className="text-sm text-gray-600">
-                                  Asignada a: {assignmentText}
-                                </p>
-                                {task.description && (
-                                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <Badge variant={task.status === 'available' ? 'secondary' : task.status === 'submitted' ? 'default' : 'outline'}>
-                                  {task.status === 'available' ? 'Disponible' : 
-                                   task.status === 'submitted' ? 'Enviada' : 
-                                   task.status === 'approved' ? 'Aprobada' : 'Rechazada'}
-                                </Badge>
-                                <div className="text-sm font-medium text-gray-900 mt-1">
-                                  {task.type === 'recurring' 
-                                    ? `${formatCurrency(task.paymentAmount)}/unidad`
-                                    : formatCurrency(task.paymentAmount)
-                                  }
+                    getTaskSubmissionsByStatus('approved').map((submission: any) => (
+                      <div key={submission.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
+                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName || submission.submittedBy?.email}</p>
+                            <p className="text-sm text-gray-500">
+                              {submission.units > 1 && `${submission.units} unidades • `}
+                              Aprobada el {new Date(submission.reviewedAt).toLocaleDateString('es-ES')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-green-600">
+                              {formatCurrency(submission.totalAmount)}
+                            </span>
+                            <Badge variant="secondary" className="block mt-1 bg-green-100 text-green-800">
+                              <Check className="mr-1 h-3 w-3" /> Aprobada
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+
+                <TabsContent value="rechazadas" className="mt-6 space-y-4">
+                  {getTaskSubmissionsByStatus('rejected').length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No hay tareas rechazadas</p>
+                  ) : (
+                    getTaskSubmissionsByStatus('rejected').map((submission: any) => (
+                      <div key={submission.id} className="border border-red-200 bg-red-50 rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
+                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName || submission.submittedBy?.email}</p>
+                            <p className="text-sm text-gray-500">
+                              {submission.units > 1 && `${submission.units} unidades • `}
+                              Rechazada el {new Date(submission.reviewedAt).toLocaleDateString('es-ES')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-red-600">
+                              {formatCurrency(submission.totalAmount)}
+                            </span>
+                            <Badge variant="destructive" className="block mt-1">
+                              <X className="mr-1 h-3 w-3" /> Rechazada
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+
+                <TabsContent value="disponibles" className="mt-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900">Tareas Disponibles</h3>
+                    <Button 
+                      onClick={() => setShowCreateTaskModal(true)}
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Nueva Tarea</span>
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {createdTasksLoading ? (
+                      Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-20" />)
+                    ) : !createdTasks?.length ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <ListTodo className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                        <p>No hay tareas creadas</p>
+                        <p className="text-sm">Haz clic en "Nueva Tarea" para crear una</p>
+                      </div>
+                    ) : (
+                      createdTasks?.map((task: any) => {
+                        const assignedChildren = task.assignedToIds?.length > 0 
+                          ? children?.filter((child: any) => task.assignedToIds.includes(child.id)) || []
+                          : [];
+                        
+                        const assignmentText = task.assignedToIds?.length === 0 || !task.assignedToIds
+                          ? 'Disponible para todos'
+                          : assignedChildren.map(child => child.firstName || child.email).join(', ');
+                        
+                        return (
+                          <div 
+                            key={task.id} 
+                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 group"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-gray-900">{task.title}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    Asignada a: {assignmentText}
+                                  </p>
+                                  {task.description && (
+                                    <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                                  )}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  {task.type === 'recurring' ? 'Recurrente' : 'Una vez'}
+                                <div className="text-right flex items-center space-x-2">
+                                  <div>
+                                    <Badge variant={task.status === 'available' ? 'secondary' : task.status === 'submitted' ? 'default' : 'outline'}>
+                                      {task.status === 'available' ? 'Disponible' : 
+                                       task.status === 'submitted' ? 'Enviada' : 
+                                       task.status === 'approved' ? 'Aprobada' : 'Rechazada'}
+                                    </Badge>
+                                    <div className="text-sm font-medium text-gray-900 mt-1">
+                                      {task.type === 'recurring' 
+                                        ? `${formatCurrency(task.paymentAmount)}/unidad`
+                                        : formatCurrency(task.paymentAmount)
+                                      }
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {task.type === 'recurring' ? 'Recurrente' : 'Una vez'}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => setEditingTask(task)}
+                                  >
+                                    Editar
+                                  </Button>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </Card>
-            </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </Card>
           </div>
         ) : (
           /* Child Dashboard */
@@ -901,6 +1012,149 @@ export default function Home() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Modal */}
+      <Dialog open={editingTask !== null} onOpenChange={() => setEditingTask(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <ListTodo className="h-5 w-5" />
+              <span>Editar Tarea</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingTask && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-title">Título</Label>
+                <Input
+                  id="edit-title"
+                  value={editingTask.title}
+                  onChange={(e) => setEditingTask(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Ej: Lavar los platos"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-description">Descripción (opcional)</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingTask.description || ''}
+                  onChange={(e) => setEditingTask(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Detalles adicionales sobre la tarea..."
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <Label>Tipo de tarea</Label>
+                <RadioGroup
+                  value={editingTask.type}
+                  onValueChange={(value) => setEditingTask(prev => ({ ...prev, type: value }))}
+                  className="flex space-x-4 mt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="oneTime" id="edit-oneTime" />
+                    <Label htmlFor="edit-oneTime">Una vez</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="recurring" id="edit-recurring" />
+                    <Label htmlFor="edit-recurring">Recurrente</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-payment">Pago</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="edit-payment"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="pl-8"
+                    value={(editingTask.paymentAmount / 100).toFixed(2)}
+                    onChange={(e) => setEditingTask(prev => ({ 
+                      ...prev, 
+                      paymentAmount: Math.round(parseFloat(e.target.value || '0') * 100)
+                    }))}
+                    placeholder="0.00"
+                  />
+                </div>
+                {editingTask.type === 'recurring' && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Para tareas recurrentes, esto es el pago por unidad
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <Label>Asignar tarea</Label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit-all-children"
+                      checked={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="edit-all-children">Disponible para todos los hijos</Label>
+                  </div>
+                  
+                  {children?.map((child: any) => (
+                    <div key={child.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-child-${child.id}`}
+                        checked={editingTask.assignedToIds?.includes(child.id) || false}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditingTask(prev => ({
+                              ...prev,
+                              assignedToIds: [...(prev.assignedToIds || []), child.id]
+                            }));
+                          } else {
+                            setEditingTask(prev => ({
+                              ...prev,
+                              assignedToIds: prev.assignedToIds?.filter(id => id !== child.id) || []
+                            }));
+                          }
+                        }}
+                        disabled={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0}
+                      />
+                      <Label htmlFor={`edit-child-${child.id}`} className={(!editingTask.assignedToIds || editingTask.assignedToIds.length === 0) ? 'text-gray-400' : ''}>
+                        {child.firstName || child.email}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex space-x-2 pt-4">
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    // TODO: Implement update task mutation
+                    setEditingTask(null);
+                    toast({ title: "Información", description: "Función de editar pendiente de implementar" });
+                  }}
+                >
+                  Guardar Cambios
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingTask(null)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -22,6 +22,11 @@
 - Tasks now use "units" instead of "time minutes" with flexible unit pricing
 - Updated UI to show "price per unit" for recurring tasks instead of "price per 30min"
 - Enhanced child interface to select number of units completed for recurring tasks
+- Implemented unified task management with 4-tab system: Pendientes, Aprobadas, Rechazadas, Disponibles
+- Added automatic tab switching when tasks are approved/rejected for better UX
+- Enhanced task cards with status-specific styling (green for approved, red for rejected)
+- Added edit functionality for available tasks with hover-based edit buttons
+- Improved task submission display to show unit quantities and better formatting
 
 # User Preferences
 
