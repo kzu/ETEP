@@ -49,7 +49,7 @@ export const tasks = pgTable("tasks", {
   description: text("description"),
   type: taskTypeEnum("type").notNull(),
   paymentAmount: integer("payment_amount").notNull(), // in cents (for recurring tasks: price per 30-minute block)
-  assignedToId: varchar("assigned_to_id").notNull().references(() => users.id),
+  assignedToIds: text("assigned_to_ids").array().default([]), // Array of user IDs, empty means available to all children
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   status: taskStatusEnum("status").notNull().default("available"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -120,9 +120,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdTasks: many(tasks, {
     relationName: "task_creator"
   }),
-  assignedTasks: many(tasks, {
-    relationName: "task_assignee"
-  }),
+  // assignedTasks: many-to-many relationship is now handled via assignedToIds array
   taskSubmissions: many(taskSubmissions),
   balance: one(balances),
   sentPayments: many(payments, {
@@ -135,11 +133,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  assignedTo: one(users, {
-    fields: [tasks.assignedToId],
-    references: [users.id],
-    relationName: "task_assignee"
-  }),
+  // assignedTo: many-to-many relationship is now handled via assignedToIds array
   createdBy: one(users, {
     fields: [tasks.createdById],
     references: [users.id],

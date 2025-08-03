@@ -14,6 +14,10 @@
 - Real-time family updates when invitations are accepted or rejected
 - Enhanced time-block system for recurring tasks with clear block visualization
 - Improved payment calculation display showing price per block and total amount
+- Replaced task creation panel with task list view for parents
+- Added "Nueva Tarea" button with modal popup for task creation
+- Implemented optional multiple child assignment for tasks (tasks can be assigned to all children or specific ones)
+- Updated database schema to use assignedToIds array instead of single assignedToId
 
 # User Preferences
 

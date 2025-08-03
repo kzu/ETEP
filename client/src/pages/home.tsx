@@ -94,7 +94,7 @@ export default function Home() {
     description: '',
     type: 'oneTime',
     paymentAmount: '',
-    assignedToId: ''
+    assignedToIds: [] as string[]
   });
 
   // Task submission states
@@ -114,7 +114,7 @@ export default function Home() {
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea creada exitosamente" });
-      setTaskForm({ title: '', description: '', type: 'oneTime', paymentAmount: '', assignedToId: '' });
+      setTaskForm({ title: '', description: '', type: 'oneTime', paymentAmount: '', assignedToIds: [] });
       setShowCreateTaskModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
@@ -504,7 +504,14 @@ export default function Home() {
                     </div>
                   ) : (
                     createdTasks?.map((task: any) => {
-                      const assignedChild = children?.find((child: any) => child.id === task.assignedToId);
+                      const assignedChildren = task.assignedToIds?.length > 0 
+                        ? children?.filter((child: any) => task.assignedToIds.includes(child.id)) || []
+                        : [];
+                      
+                      const assignmentText = task.assignedToIds?.length === 0 || !task.assignedToIds
+                        ? 'Disponible para todos'
+                        : assignedChildren.map(child => child.firstName || child.email).join(', ');
+                      
                       return (
                         <div 
                           key={task.id} 
@@ -515,7 +522,7 @@ export default function Home() {
                               <div className="flex-1">
                                 <h4 className="font-medium text-gray-900">{task.title}</h4>
                                 <p className="text-sm text-gray-600">
-                                  Asignada a: {assignedChild?.firstName || assignedChild?.email || 'Usuario no encontrado'}
+                                  Asignada a: {assignmentText}
                                 </p>
                                 {task.description && (
                                   <p className="text-sm text-gray-500 mt-1">{task.description}</p>
@@ -786,19 +793,49 @@ export default function Home() {
             </div>
             
             <div>
-              <Label htmlFor="modal-assignedTo">Asignar a</Label>
-              <Select value={taskForm.assignedToId} onValueChange={(value) => setTaskForm(prev => ({ ...prev, assignedToId: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar hijo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {children?.map((child: any) => (
-                    <SelectItem key={child.id} value={child.id}>
+              <Label>Asignar a (opcional)</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="assign-all"
+                    checked={taskForm.assignedToIds.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
+                      }
+                    }}
+                  />
+                  <Label htmlFor="assign-all" className="text-sm">
+                    Disponible para todos los hijos
+                  </Label>
+                </div>
+                
+                {children?.map((child: any) => (
+                  <div key={child.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`child-${child.id}`}
+                      checked={taskForm.assignedToIds.includes(child.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTaskForm(prev => ({ 
+                            ...prev, 
+                            assignedToIds: [...prev.assignedToIds, child.id] 
+                          }));
+                        } else {
+                          setTaskForm(prev => ({ 
+                            ...prev, 
+                            assignedToIds: prev.assignedToIds.filter(id => id !== child.id) 
+                          }));
+                        }
+                      }}
+                      disabled={taskForm.assignedToIds.length === 0}
+                    />
+                    <Label htmlFor={`child-${child.id}`} className="text-sm">
                       {child.firstName || child.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div>
@@ -864,7 +901,7 @@ export default function Home() {
                   ...taskForm,
                   paymentAmount: Math.round(parseFloat(taskForm.paymentAmount) * 100)
                 })}
-                disabled={createTaskMutation.isPending || !taskForm.title || !taskForm.assignedToId || !taskForm.paymentAmount}
+                disabled={createTaskMutation.isPending || !taskForm.title || !taskForm.paymentAmount}
                 className="flex-1"
               >
                 <Plus className="mr-2 h-4 w-4" />

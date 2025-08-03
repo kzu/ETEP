@@ -108,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/tasks/assigned', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const tasks = await storage.getTasksByAssignee(userId);
+      const tasks = await storage.getTasksForChild(userId);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching assigned tasks:", error);

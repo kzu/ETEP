@@ -35,7 +35,7 @@ export interface IStorage {
   
   // Task operations
   createTask(task: InsertTask): Promise<Task>;
-  getTasksByAssignee(assigneeId: string): Promise<Task[]>;
+  getTasksForChild(childId: string): Promise<Task[]>;
   getTasksByCreator(creatorId: string): Promise<Task[]>;
   updateTaskStatus(taskId: string, status: string): Promise<void>;
   
@@ -122,8 +122,17 @@ export class DatabaseStorage implements IStorage {
     return newTask;
   }
 
-  async getTasksByAssignee(assigneeId: string): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.assignedToId, assigneeId));
+  async getTasksForChild(childId: string): Promise<Task[]> {
+    const allTasks = await db.select().from(tasks);
+    
+    // Return tasks where:
+    // 1. assignedToIds is empty (available to all children), OR
+    // 2. childId is in the assignedToIds array
+    return allTasks.filter(task => 
+      !task.assignedToIds || 
+      task.assignedToIds.length === 0 || 
+      task.assignedToIds.includes(childId)
+    );
   }
 
   async getTasksByCreator(creatorId: string): Promise<Task[]> {
