@@ -636,6 +636,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Also broadcast to the child who submitted the task so their history updates
+      const submission = await storage.getTaskSubmissionById(id, familyId);
+      if (submission) {
+        broadcastSystemMessageToUser(submission.submittedById, {
+          type: 'task_status_updated',
+          submissionId: id,
+          action: action
+        });
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error reviewing task submission:", error);
