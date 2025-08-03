@@ -81,6 +81,16 @@ export default function Home() {
     enabled: user?.role === 'parent',
   });
 
+  const { data: approvedSubmissions, isLoading: approvedLoading } = useQuery({
+    queryKey: ["/api/task-submissions/approved"],
+    enabled: user?.role === 'parent',
+  });
+
+  const { data: rejectedSubmissions, isLoading: rejectedLoading } = useQuery({
+    queryKey: ["/api/task-submissions/rejected"],
+    enabled: user?.role === 'parent',
+  });
+
   const { data: createdTasks, isLoading: createdTasksLoading } = useQuery({
     queryKey: ["/api/tasks"],
     enabled: user?.role === 'parent',
@@ -171,7 +181,10 @@ export default function Home() {
     },
     onSuccess: (_, { action }) => {
       toast({ title: "Éxito", description: "Tarea revisada exitosamente" });
-      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions"] });
+      // Invalidate all task submission queries
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       
@@ -332,7 +345,10 @@ export default function Home() {
 
   // Helper functions for task filtering
   const getTaskSubmissionsByStatus = (status: string) => {
-    return pendingSubmissions?.filter((submission: any) => submission.status === status) || [];
+    if (status === 'approved') return approvedSubmissions || [];
+    if (status === 'rejected') return rejectedSubmissions || [];
+    if (status === 'submitted') return pendingSubmissions || [];
+    return [];
   };
 
   const countTasksByStatus = (status: string) => {

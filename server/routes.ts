@@ -246,6 +246,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/task-submissions/approved', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'parent') {
+        return res.status(403).json({ message: "Only parents can view approved submissions" });
+      }
+      
+      const submissions = await storage.getTaskSubmissionsByStatus(userId, 'approved');
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching approved submissions:", error);
+      res.status(500).json({ message: "Failed to fetch submissions" });
+    }
+  });
+
+  app.get('/api/task-submissions/rejected', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'parent') {
+        return res.status(403).json({ message: "Only parents can view rejected submissions" });
+      }
+      
+      const submissions = await storage.getTaskSubmissionsByStatus(userId, 'rejected');
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching rejected submissions:", error);
+      res.status(500).json({ message: "Failed to fetch submissions" });
+    }
+  });
+
   app.patch('/api/task-submissions/:id/:action', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

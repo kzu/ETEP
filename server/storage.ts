@@ -47,6 +47,7 @@ export interface IStorage {
   getTaskSubmissionsByUser(userId: string): Promise<TaskSubmission[]>;
   getTaskSubmissionsByTask(taskId: string): Promise<TaskSubmission[]>;
   getPendingTaskSubmissions(parentId: string): Promise<TaskSubmission[]>;
+  getTaskSubmissionsByStatus(parentId: string, status: string): Promise<TaskSubmission[]>;
   updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void>;
   
   // Balance operations
@@ -195,6 +196,21 @@ export class DatabaseStorage implements IStorage {
         eq(taskSubmissions.status, "submitted")
       ))
       .orderBy(desc(taskSubmissions.submittedAt));
+  }
+
+  async getTaskSubmissionsByStatus(parentId: string, status: string): Promise<TaskSubmission[]> {
+    // Get all children of the parent
+    const children = await this.getChildren(parentId);
+    const childIds = children.map(child => child.id);
+    
+    if (childIds.length === 0) return [];
+
+    return await db.select().from(taskSubmissions)
+      .where(and(
+        inArray(taskSubmissions.submittedById, childIds),
+        eq(taskSubmissions.status, status as any)
+      ))
+      .orderBy(desc(taskSubmissions.reviewedAt));
   }
 
   async updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void> {
