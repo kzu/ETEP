@@ -189,10 +189,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not part of any family" });
       }
       
-      // Get the existing task to verify ownership
+      // Check if user has permission to edit tasks (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can edit tasks" });
+      }
+      
+      // Get the existing task and verify it exists in the family
       const existingTask = await storage.getTaskById(taskId, familyId);
-      if (!existingTask || existingTask.createdById !== userId) {
-        return res.status(404).json({ message: 'Task not found or not authorized' });
+      if (!existingTask) {
+        return res.status(404).json({ message: 'Task not found' });
       }
       
       const updatedTask = await storage.updateTask(taskId, {
@@ -221,10 +228,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not part of any family" });
       }
       
-      // Get the existing task to verify ownership
+      // Check if user has permission to delete tasks (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can delete tasks" });
+      }
+      
+      // Get the existing task and verify it exists in the family
       const existingTask = await storage.getTaskById(taskId, familyId);
-      if (!existingTask || existingTask.createdById !== userId) {
-        return res.status(404).json({ message: 'Task not found or not authorized' });
+      if (!existingTask) {
+        return res.status(404).json({ message: 'Task not found' });
       }
       
       await storage.deleteTask(taskId, familyId);
@@ -255,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         familyId,
         createdById: userId,
-        paymentAmount: Math.round(req.body.paymentAmount * 100) // convert to cents
+        paymentAmount: req.body.paymentAmount // store as whole number
       });
       
       const task = await storage.createTask(validatedData);
