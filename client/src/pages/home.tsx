@@ -311,7 +311,7 @@ export default function Home() {
   });
 
   // Helper functions
-  // Helper function to format currency (values stored as full amounts)
+  // Helper function to format currency (no conversion, just formatting)
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', { 
       style: 'currency', 
