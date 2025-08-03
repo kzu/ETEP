@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,6 +27,7 @@ export default function ParentOnboarding() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [familyName, setFamilyName] = useState('');
   const [isWaitingForInvitation, setIsWaitingForInvitation] = useState(false);
 
@@ -91,6 +93,10 @@ export default function ParentOnboarding() {
         description: "Tu familia ha sido creada exitosamente. Ahora puedes invitar a otros miembros." 
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Redirect to home page
+      setTimeout(() => {
+        setLocation("/");
+      }, 1000);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -122,6 +128,10 @@ export default function ParentOnboarding() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/family-invitations"] });
+      // Redirect to home page
+      setTimeout(() => {
+        setLocation("/");
+      }, 1000);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
