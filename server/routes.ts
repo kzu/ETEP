@@ -31,6 +31,27 @@ function broadcastNotificationToUser(userId: string, notification: any) {
   }
 }
 
+async function broadcastNotificationToFamily(familyId: string, notification: any) {
+  // Get all family members
+  const familyMembers = await storage.getFamilyMembers(familyId);
+  const message = JSON.stringify({
+    type: 'notification',
+    data: notification
+  });
+  
+  // Broadcast to all family members
+  familyMembers.forEach(member => {
+    const connections = userConnections.get(member.userId);
+    if (connections) {
+      connections.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(message);
+        }
+      });
+    }
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
