@@ -31,6 +31,19 @@ function broadcastNotificationToUser(userId: string, notification: any) {
   }
 }
 
+// Helper function to broadcast system messages to user (without notification wrapper)
+function broadcastSystemMessageToUser(userId: string, message: any) {
+  const connections = userConnections.get(userId);
+  if (connections) {
+    const messageStr = JSON.stringify(message);
+    connections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(messageStr);
+      }
+    });
+  }
+}
+
 async function broadcastNotificationToFamily(familyId: string, notification: any) {
   // Get all family members
   const familyMembers = await storage.getFamilyMembers(familyId);
@@ -542,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const parentOrCollaborator of parentsAndCollaborators) {
         // Skip the user who performed the action (they'll see the update immediately)
         if (parentOrCollaborator.id !== userId) {
-          broadcastNotificationToUser(parentOrCollaborator.id, {
+          broadcastSystemMessageToUser(parentOrCollaborator.id, {
             type: 'task_status_updated',
             submissionId: id,
             action: action
