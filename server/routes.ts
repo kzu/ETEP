@@ -127,13 +127,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create notification for parent
       if (user.parentId) {
-        await storage.createNotification(
-          user.parentId,
-          "Nueva tarea enviada",
-          `${user.firstName || user.email} ha enviado una tarea para revisión`,
-          "task_submitted",
-          submission.id
-        );
+        await storage.createNotification({
+          userId: user.parentId,
+          title: "Nueva tarea enviada",
+          message: `${user.firstName || user.email} ha enviado una tarea para revisión`,
+          type: "task_submitted",
+          relatedId: submission.id
+        });
       }
       
       res.json(submission);
@@ -193,13 +193,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Create notification for child
-          await storage.createNotification(
-            submission.submittedById,
-            "Tarea aprobada",
-            `Tu tarea ha sido aprobada. +$${(submission.totalAmount / 100).toFixed(2)}`,
-            "task_approved",
-            submission.id
-          );
+          await storage.createNotification({
+            userId: submission.submittedById,
+            title: "Tarea aprobada",
+            message: `Tu tarea ha sido aprobada. +$${(submission.totalAmount / 100).toFixed(2)}`,
+            type: "task_approved",
+            relatedId: submission.id
+          });
         }
       }
       
@@ -229,13 +229,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment(validatedData);
       
       // Create notification for child
-      await storage.createNotification(
-        validatedData.toUserId,
-        "Pago enviado",
-        `Papá envió un pago de $${(validatedData.amount / 100).toFixed(2)}. ¡Confirma para agregarlo a tu cuenta!`,
-        "payment_sent",
-        payment.id
-      );
+      await storage.createNotification({
+        userId: validatedData.toUserId,
+        title: "Pago enviado",
+        message: `Papá envió un pago de $${(validatedData.amount / 100).toFixed(2)}. ¡Confirma para agregarlo a tu cuenta!`,
+        type: "payment_sent",
+        relatedId: payment.id
+      });
       
       res.json(payment);
     } catch (error) {
@@ -345,6 +345,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const invitation = await storage.createFamilyInvitation(userId, childEmail);
+      
+      // Don't create notification here - will be handled when child logs in and checks invitations
+      
       res.json(invitation);
     } catch (error) {
       console.error("Error creating family invitation:", error);
@@ -374,6 +377,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { id } = req.params;
       
+      const invitation = await storage.getInvitationById(id);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
       await storage.acceptInvitation(id, userId);
       
       // Update user role to child after accepting invitation
@@ -384,6 +392,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!balance) {
         balance = await storage.createBalance(userId);
       }
+      
+      // Create notification for the parent
+      const user = await storage.getUser(userId);
+      await storage.createNotification({
+        userId: invitation.parentId,
+        type: 'invitation_accepted',
+        title: 'Invitación Aceptada',
+        message: `${user?.firstName || 'Tu hijo/a'} ha aceptado la invitación y se ha unido a la familia`,
+        relatedId: id
+      });
       
       res.json({ success: true });
     } catch (error) {

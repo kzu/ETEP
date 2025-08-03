@@ -55,7 +55,7 @@ export interface IStorage {
   updatePaymentStatus(paymentId: string, status: string): Promise<void>;
   
   // Notification operations
-  createNotification(userId: string, title: string, message: string, type: string, relatedId?: string): Promise<Notification>;
+  createNotification(data: { userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification>;
   getNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(notificationId: string): Promise<void>;
   
@@ -190,9 +190,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Notification operations
-  async createNotification(userId: string, title: string, message: string, type: string, relatedId?: string): Promise<Notification> {
+  async createNotification(data: { userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification> {
     const [notification] = await db.insert(notifications)
-      .values({ userId, title, message, type, relatedId })
+      .values(data)
       .returning();
     return notification;
   }
@@ -242,6 +242,12 @@ export class DatabaseStorage implements IStorage {
         eq(familyInvitations.status, "pending")
       ))
       .orderBy(desc(familyInvitations.createdAt));
+  }
+
+  async getInvitationById(id: string): Promise<FamilyInvitation | undefined> {
+    const [invitation] = await db.select().from(familyInvitations)
+      .where(eq(familyInvitations.id, id));
+    return invitation;
   }
 
   async acceptInvitation(invitationId: string, childId: string): Promise<void> {
