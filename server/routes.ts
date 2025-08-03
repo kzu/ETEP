@@ -108,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the existing task to verify ownership
       const existingTask = await storage.getTaskById(taskId);
-      if (!existingTask || existingTask.createdBy !== userId) {
+      if (!existingTask || existingTask.createdById !== userId) {
         return res.status(404).json({ message: 'Task not found or not authorized' });
       }
       
