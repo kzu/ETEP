@@ -955,58 +955,63 @@ export default function Home() {
             </div>
             
             <div>
-              <Label>Asignar a (opcional)</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="assign-all"
-                    checked={taskForm.assignedToIds.length === 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
-                      } else {
-                        // When unchecking "all children", don't automatically select anyone
-                        setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
-                      }
-                    }}
-                  />
-                  <Label htmlFor="assign-all" className="text-sm">
-                    Disponible para todos los hijos
-                  </Label>
-                </div>
-                
-                {children?.map((child: any) => (
-                  <div key={child.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`child-${child.id}`}
-                      checked={taskForm.assignedToIds.includes(child.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          // First time selecting a child, clear the "all children" mode
-                          const currentIds = taskForm.assignedToIds;
-                          if (currentIds.length === 0) {
-                            setTaskForm(prev => ({ ...prev, assignedToIds: [child.id] }));
+              <Label>Asignar a</Label>
+              <Select 
+                value={taskForm.assignedToIds.length === 0 ? "all" : "specific"}
+                onValueChange={(value) => {
+                  if (value === "all") {
+                    setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
+                  } else {
+                    // Keep current selection if switching to specific, or clear if none selected
+                    if (taskForm.assignedToIds.length === 0) {
+                      setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {taskForm.assignedToIds.length === 0 
+                      ? "Todos los hijos" 
+                      : `${taskForm.assignedToIds.length} hijo(s) seleccionado(s)`
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los hijos</SelectItem>
+                  <SelectItem value="specific">Hijos específicos</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {taskForm.assignedToIds.length === 0 ? null : (
+                <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
+                  <Label className="text-sm font-medium">Seleccionar hijos:</Label>
+                  {children?.map((child: any) => (
+                    <div key={child.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`create-child-${child.id}`}
+                        checked={taskForm.assignedToIds.includes(child.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setTaskForm(prev => ({ 
+                              ...prev, 
+                              assignedToIds: [...prev.assignedToIds, child.id] 
+                            }));
                           } else {
                             setTaskForm(prev => ({ 
                               ...prev, 
-                              assignedToIds: [...currentIds, child.id] 
+                              assignedToIds: prev.assignedToIds.filter(id => id !== child.id) 
                             }));
                           }
-                        } else {
-                          setTaskForm(prev => ({ 
-                            ...prev, 
-                            assignedToIds: prev.assignedToIds.filter(id => id !== child.id) 
-                          }));
-                        }
-                      }}
-                      disabled={taskForm.assignedToIds.length === 0}
-                    />
-                    <Label htmlFor={`child-${child.id}`} className={`text-sm ${taskForm.assignedToIds.length === 0 ? 'text-gray-400' : ''}`}>
-                      {child.firstName || child.email}
-                    </Label>
-                  </div>
-                ))}
-              </div>
+                        }}
+                      />
+                      <Label htmlFor={`create-child-${child.id}`} className="text-sm">
+                        {child.firstName || child.email}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div>
@@ -1162,55 +1167,62 @@ export default function Home() {
               
               <div>
                 <Label>Asignar tarea</Label>
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="edit-all-children"  
-                      checked={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
-                        } else {
-                          // When unchecking "all children", enable individual selection
-                          setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
-                        }
-                      }}
-                    />
-                    <Label htmlFor="edit-all-children">Disponible para todos los hijos</Label>
-                  </div>
-                  
-                  {children?.map((child: any) => (
-                    <div key={child.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-child-${child.id}`}
-                        checked={editingTask.assignedToIds?.includes(child.id) || false}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            // First time selecting a child, clear the "all children" mode
-                            const currentIds = editingTask.assignedToIds || [];
-                            if (currentIds.length === 0) {
-                              setEditingTask(prev => ({ ...prev, assignedToIds: [child.id] }));
+                <Select 
+                  value={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0 ? "all" : "specific"}
+                  onValueChange={(value) => {
+                    if (value === "all") {
+                      setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
+                    } else {
+                      // Keep current selection if switching to specific, or initialize empty array
+                      if (!editingTask.assignedToIds || editingTask.assignedToIds.length === 0) {
+                        setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue>
+                      {!editingTask.assignedToIds || editingTask.assignedToIds.length === 0
+                        ? "Todos los hijos" 
+                        : `${editingTask.assignedToIds.length} hijo(s) seleccionado(s)`
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los hijos</SelectItem>
+                    <SelectItem value="specific">Hijos específicos</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {editingTask.assignedToIds && editingTask.assignedToIds.length !== 0 ? (
+                  <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
+                    <Label className="text-sm font-medium">Seleccionar hijos:</Label>
+                    {children?.map((child: any) => (
+                      <div key={child.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-child-${child.id}`}
+                          checked={editingTask.assignedToIds?.includes(child.id) || false}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setEditingTask(prev => ({
+                                ...prev,
+                                assignedToIds: [...(prev.assignedToIds || []), child.id]
+                              }));
                             } else {
                               setEditingTask(prev => ({
                                 ...prev,
-                                assignedToIds: [...currentIds, child.id]
+                                assignedToIds: (prev.assignedToIds || []).filter(id => id !== child.id)
                               }));
                             }
-                          } else {
-                            setEditingTask(prev => ({
-                              ...prev,
-                              assignedToIds: (prev.assignedToIds || []).filter(id => id !== child.id)
-                            }));
-                          }
-                        }}
-                        disabled={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0}
-                      />
-                      <Label htmlFor={`edit-child-${child.id}`} className={(!editingTask.assignedToIds || editingTask.assignedToIds.length === 0) ? 'text-gray-400' : ''}>
-                        {child.firstName || child.email}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                          }}
+                        />
+                        <Label htmlFor={`edit-child-${child.id}`} className="text-sm">
+                          {child.firstName || child.email}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               
               <div className="flex space-x-2 pt-4">
