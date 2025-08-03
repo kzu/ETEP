@@ -998,11 +998,13 @@ export default function Home() {
                               assignedToIds: prev.assignedToIds.filter(id => id !== "specific-mode").concat([child.id])
                             }));
                           } else {
-                            const newIds = prev => prev.assignedToIds.filter(id => id !== child.id);
-                            setTaskForm(prev => ({ 
-                              ...prev, 
-                              assignedToIds: newIds(prev).length === 0 ? ["specific-mode"] : newIds(prev)
-                            }));
+                            setTaskForm(prev => {
+                              const newIds = prev.assignedToIds.filter(id => id !== child.id);
+                              return {
+                                ...prev, 
+                                assignedToIds: newIds.length === 0 ? ["specific-mode"] : newIds
+                              };
+                            });
                           }
                         }}
                       />
@@ -1211,11 +1213,13 @@ export default function Home() {
                                 assignedToIds: (prev.assignedToIds || []).filter(id => id !== "specific-mode").concat([child.id])
                               }));
                             } else {
-                              const newIds = (prev.assignedToIds || []).filter(id => id !== child.id);
-                              setEditingTask(prev => ({
-                                ...prev,
-                                assignedToIds: newIds.length === 0 ? ["specific-mode"] : newIds
-                              }));
+                              setEditingTask(prev => {
+                                const newIds = (prev.assignedToIds || []).filter(id => id !== child.id);
+                                return {
+                                  ...prev,
+                                  assignedToIds: newIds.length === 0 ? ["specific-mode"] : newIds
+                                };
+                              });
                             }
                           }}
                         />
