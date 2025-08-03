@@ -964,6 +964,9 @@ export default function Home() {
                     onCheckedChange={(checked) => {
                       if (checked) {
                         setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
+                      } else {
+                        // When unchecking "all children", don't automatically select anyone
+                        setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
                       }
                     }}
                   />
@@ -979,10 +982,16 @@ export default function Home() {
                       checked={taskForm.assignedToIds.includes(child.id)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setTaskForm(prev => ({ 
-                            ...prev, 
-                            assignedToIds: [...prev.assignedToIds, child.id] 
-                          }));
+                          // First time selecting a child, clear the "all children" mode
+                          const currentIds = taskForm.assignedToIds;
+                          if (currentIds.length === 0) {
+                            setTaskForm(prev => ({ ...prev, assignedToIds: [child.id] }));
+                          } else {
+                            setTaskForm(prev => ({ 
+                              ...prev, 
+                              assignedToIds: [...currentIds, child.id] 
+                            }));
+                          }
                         } else {
                           setTaskForm(prev => ({ 
                             ...prev, 
@@ -992,7 +1001,7 @@ export default function Home() {
                       }}
                       disabled={taskForm.assignedToIds.length === 0}
                     />
-                    <Label htmlFor={`child-${child.id}`} className="text-sm">
+                    <Label htmlFor={`child-${child.id}`} className={`text-sm ${taskForm.assignedToIds.length === 0 ? 'text-gray-400' : ''}`}>
                       {child.firstName || child.email}
                     </Label>
                   </div>
@@ -1156,10 +1165,13 @@ export default function Home() {
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="edit-all-children"
+                      id="edit-all-children"  
                       checked={!editingTask.assignedToIds || editingTask.assignedToIds.length === 0}
                       onCheckedChange={(checked) => {
                         if (checked) {
+                          setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
+                        } else {
+                          // When unchecking "all children", enable individual selection
                           setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
                         }
                       }}
@@ -1174,14 +1186,20 @@ export default function Home() {
                         checked={editingTask.assignedToIds?.includes(child.id) || false}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setEditingTask(prev => ({
-                              ...prev,
-                              assignedToIds: [...(prev.assignedToIds || []), child.id]
-                            }));
+                            // First time selecting a child, clear the "all children" mode
+                            const currentIds = editingTask.assignedToIds || [];
+                            if (currentIds.length === 0) {
+                              setEditingTask(prev => ({ ...prev, assignedToIds: [child.id] }));
+                            } else {
+                              setEditingTask(prev => ({
+                                ...prev,
+                                assignedToIds: [...currentIds, child.id]
+                              }));
+                            }
                           } else {
                             setEditingTask(prev => ({
                               ...prev,
-                              assignedToIds: prev.assignedToIds?.filter(id => id !== child.id) || []
+                              assignedToIds: (prev.assignedToIds || []).filter(id => id !== child.id)
                             }));
                           }
                         }}
