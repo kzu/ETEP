@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not part of any family" });
       }
       
-      const tasks = await storage.getTasksByCreator(userId, familyId);
+      const tasks = await storage.getTasksForFamily(familyId);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
