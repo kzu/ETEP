@@ -248,13 +248,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      const familyId = await getUserFamilyId(userId);
-      if (!familyId) {
-        return res.status(400).json({ message: "User not part of any family" });
+      // Get all family memberships for the user
+      const familyMemberships = await storage.getUserFamilyMemberships(userId);
+      const childMemberships = familyMemberships.filter(m => m.role === 'child');
+      
+      if (childMemberships.length === 0) {
+        return res.status(403).json({ message: "Only children can view assigned tasks" });
       }
       
-      const tasks = await storage.getTasksForChild(userId, familyId);
-      res.json(tasks);
+      // Get tasks from all families where user is a child
+      const allTasks = [];
+      for (const membership of childMemberships) {
+        const tasks = await storage.getTasksForChild(userId, membership.familyId);
+        const family = await storage.getFamilyById(membership.familyId);
+        
+        // Add family information to each task
+        const tasksWithFamily = tasks.map(task => ({
+          ...task,
+          family: {
+            id: family?.id,
+            name: family?.name
+          }
+        }));
+        
+        allTasks.push(...tasksWithFamily);
+      }
+      
+      res.json({
+        tasks: allTasks,
+        multipleFamilies: childMemberships.length > 1
+      });
     } catch (error) {
       console.error("Error fetching assigned tasks:", error);
       res.status(500).json({ message: "Failed to fetch tasks" });

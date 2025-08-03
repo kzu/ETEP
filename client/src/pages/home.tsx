@@ -79,10 +79,13 @@ export default function Home() {
     enabled: isParent,
   });
 
-  const { data: assignedTasks, isLoading: tasksLoading } = useQuery({
+  const { data: assignedTasksData, isLoading: tasksLoading } = useQuery({
     queryKey: ["/api/tasks/assigned"],
     enabled: isChild,
   });
+
+  const assignedTasks = assignedTasksData?.tasks || [];
+  const multipleFamilies = assignedTasksData?.multipleFamilies || false;
 
   const { data: pendingSubmissions, isLoading: submissionsLoading } = useQuery({
     queryKey: ["/api/task-submissions/pending"],
@@ -783,7 +786,14 @@ export default function Home() {
                       <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h4 className="font-medium text-gray-900">{task.title}</h4>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-gray-900">{task.title}</h4>
+                              {multipleFamilies && task.family && (
+                                <Badge variant="outline" className="text-xs">
+                                  {task.family.name}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-600">
                               {task.type === 'recurring' ? 'Tarea recurrente' : 'Tarea de una vez'}
                             </p>
