@@ -43,12 +43,12 @@ export default function ParentOnboarding() {
   const { data: invitations, isLoading: invitationsLoading, refetch: refetchInvitations } = useQuery({
     queryKey: ["/api/family-invitations"],
     select: (data) => data as any[] || [],
-    refetchInterval: isWaitingForInvitation ? 3000 : false, // Poll every 3 seconds when waiting
+    refetchInterval: 3000, // Always poll every 3 seconds for invitations
   });
 
   // WebSocket connection for real-time invitations
   useEffect(() => {
-    if (!isWaitingForInvitation) return;
+    if (!user?.id) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -56,15 +56,17 @@ export default function ParentOnboarding() {
 
     socket.onopen = () => {
       console.log("WebSocket connected for invitation updates");
+      // Send authentication message
+      socket.send(JSON.stringify({ type: 'auth', userId: user.id }));
     };
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'family_invitation') {
+        if (data.type === 'notification' && data.data?.type === 'family_invitation') {
           toast({
             title: "Nueva invitación recibida",
-            description: `Has recibido una invitación para unirte a ${data.familyName}`,
+            description: `Has recibido una invitación para unirte a ${data.data.familyName}`,
           });
           refetchInvitations();
         }
@@ -80,7 +82,7 @@ export default function ParentOnboarding() {
     return () => {
       socket.close();
     };
-  }, [isWaitingForInvitation, refetchInvitations, toast]);
+  }, [user?.id, refetchInvitations, toast]);
 
   // Create family mutation
   const createFamilyMutation = useMutation({
