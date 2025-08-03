@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import RoleSelection from "@/pages/role-selection";
 import ParentOnboarding from "@/pages/parent-onboarding";
 import FamilyManagement from "@/pages/family-management";
+import NameSetup from "@/pages/name-setup";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -18,7 +19,9 @@ function Router() {
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
-      ) : !user || !(user as any)?.hasFamily ? (
+      ) : !user || !(user as any)?.firstName ? (
+        <Route path="/" component={NameSetup} />
+      ) : !(user as any)?.hasFamily ? (
         <>
           <Route path="/" component={RoleSelection} />
           <Route path="/parent-onboarding" component={ParentOnboarding} />

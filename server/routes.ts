@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema } from "@shared/schema";
+import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema, updateUserNameSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Store WebSocket connections by user ID
@@ -93,6 +93,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user name
+  app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const nameData = updateUserNameSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUserName(userId, nameData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user name:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Validation error", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update user name" });
+      }
     }
   });
 

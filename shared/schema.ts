@@ -283,3 +283,9 @@ export const updateUserRoleSchema = z.object({
   parentEmail: z.string().email().optional(), // for children joining families
 });
 export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;
+
+export const updateUserNameSchema = z.object({
+  firstName: z.string().min(1, "El nombre es requerido"),
+  lastName: z.string().optional(),
+});
+export type UpdateUserName = z.infer<typeof updateUserNameSchema>;

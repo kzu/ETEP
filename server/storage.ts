@@ -22,6 +22,7 @@ import {
   type FamilyMembership,
   type FamilyInvitation,
   type UpdateUserRole,
+  type UpdateUserName,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -34,6 +35,7 @@ export interface IStorage {
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserName(userId: string, nameData: UpdateUserName): Promise<User>;
   
   // Family operations
   getChildren(parentId: string): Promise<User[]>;
@@ -135,6 +137,19 @@ export class DatabaseStorage implements IStorage {
           profileImageUrl: userData.email ? generateGravatarUrl(userData.email) : userData.profileImageUrl,
         },
       })
+      .returning();
+    return user;
+  }
+
+  async updateUserName(userId: string, nameData: UpdateUserName): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        firstName: nameData.firstName,
+        lastName: nameData.lastName,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }
