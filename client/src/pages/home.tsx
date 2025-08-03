@@ -962,10 +962,8 @@ export default function Home() {
                   if (value === "all") {
                     setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
                   } else {
-                    // Keep current selection if switching to specific, or clear if none selected
-                    if (taskForm.assignedToIds.length === 0) {
-                      setTaskForm(prev => ({ ...prev, assignedToIds: [] }));
-                    }
+                    // Switch to specific mode - initialize with empty array to show checkboxes
+                    setTaskForm(prev => ({ ...prev, assignedToIds: ["specific-mode"] }));
                   }
                 }}
               >
@@ -973,7 +971,9 @@ export default function Home() {
                   <SelectValue>
                     {taskForm.assignedToIds.length === 0 
                       ? "Todos los hijos" 
-                      : `${taskForm.assignedToIds.length} hijo(s) seleccionado(s)`
+                      : taskForm.assignedToIds.includes("specific-mode")
+                        ? "Seleccionar hijos específicos"
+                        : `${taskForm.assignedToIds.length} hijo(s) seleccionado(s)`
                     }
                   </SelectValue>
                 </SelectTrigger>
@@ -983,7 +983,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
               
-              {taskForm.assignedToIds.length === 0 ? null : (
+              {taskForm.assignedToIds.length > 0 && taskForm.assignedToIds[0] !== "" ? (
                 <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
                   <Label className="text-sm font-medium">Seleccionar hijos:</Label>
                   {children?.map((child: any) => (
@@ -995,12 +995,13 @@ export default function Home() {
                           if (checked) {
                             setTaskForm(prev => ({ 
                               ...prev, 
-                              assignedToIds: [...prev.assignedToIds, child.id] 
+                              assignedToIds: prev.assignedToIds.filter(id => id !== "specific-mode").concat([child.id])
                             }));
                           } else {
+                            const newIds = prev => prev.assignedToIds.filter(id => id !== child.id);
                             setTaskForm(prev => ({ 
                               ...prev, 
-                              assignedToIds: prev.assignedToIds.filter(id => id !== child.id) 
+                              assignedToIds: newIds(prev).length === 0 ? ["specific-mode"] : newIds(prev)
                             }));
                           }
                         }}
@@ -1011,7 +1012,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
             
             <div>
@@ -1076,7 +1077,8 @@ export default function Home() {
               <Button 
                 onClick={() => createTaskMutation.mutate({
                   ...taskForm,
-                  paymentAmount: parseInt(taskForm.paymentAmount) || 0
+                  paymentAmount: parseInt(taskForm.paymentAmount) || 0,
+                  assignedToIds: taskForm.assignedToIds.filter(id => id !== "specific-mode")
                 })}
                 disabled={createTaskMutation.isPending || !taskForm.title || !taskForm.paymentAmount}
                 className="flex-1"
@@ -1173,10 +1175,8 @@ export default function Home() {
                     if (value === "all") {
                       setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
                     } else {
-                      // Keep current selection if switching to specific, or initialize empty array
-                      if (!editingTask.assignedToIds || editingTask.assignedToIds.length === 0) {
-                        setEditingTask(prev => ({ ...prev, assignedToIds: [] }));
-                      }
+                      // Switch to specific mode - initialize with marker to show checkboxes
+                      setEditingTask(prev => ({ ...prev, assignedToIds: ["specific-mode"] }));
                     }
                   }}
                 >
@@ -1184,7 +1184,9 @@ export default function Home() {
                     <SelectValue>
                       {!editingTask.assignedToIds || editingTask.assignedToIds.length === 0
                         ? "Todos los hijos" 
-                        : `${editingTask.assignedToIds.length} hijo(s) seleccionado(s)`
+                        : editingTask.assignedToIds.includes("specific-mode")
+                          ? "Seleccionar hijos específicos"
+                          : `${editingTask.assignedToIds.length} hijo(s) seleccionado(s)`
                       }
                     </SelectValue>
                   </SelectTrigger>
@@ -1194,7 +1196,7 @@ export default function Home() {
                   </SelectContent>
                 </Select>
                 
-                {editingTask.assignedToIds && editingTask.assignedToIds.length !== 0 ? (
+                {editingTask.assignedToIds && editingTask.assignedToIds.length > 0 && editingTask.assignedToIds[0] !== "" ? (
                   <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
                     <Label className="text-sm font-medium">Seleccionar hijos:</Label>
                     {children?.map((child: any) => (
@@ -1206,12 +1208,13 @@ export default function Home() {
                             if (checked) {
                               setEditingTask(prev => ({
                                 ...prev,
-                                assignedToIds: [...(prev.assignedToIds || []), child.id]
+                                assignedToIds: (prev.assignedToIds || []).filter(id => id !== "specific-mode").concat([child.id])
                               }));
                             } else {
+                              const newIds = (prev.assignedToIds || []).filter(id => id !== child.id);
                               setEditingTask(prev => ({
                                 ...prev,
-                                assignedToIds: (prev.assignedToIds || []).filter(id => id !== child.id)
+                                assignedToIds: newIds.length === 0 ? ["specific-mode"] : newIds
                               }));
                             }
                           }}
@@ -1228,7 +1231,10 @@ export default function Home() {
               <div className="flex space-x-2 pt-4">
                 <Button
                   className="flex-1"
-                  onClick={() => updateTaskMutation.mutate(editingTask)}
+                  onClick={() => updateTaskMutation.mutate({
+                    ...editingTask,
+                    assignedToIds: editingTask.assignedToIds?.filter(id => id !== "specific-mode") || []
+                  })}
                   disabled={updateTaskMutation.isPending || !editingTask.title || !editingTask.paymentAmount}
                 >
                   Guardar Cambios
