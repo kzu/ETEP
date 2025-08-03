@@ -138,9 +138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertTaskSubmissionSchema.parse({
-        ...req.body,
+        taskId: req.body.taskId,
         submittedById: userId,
-        totalAmount: Math.round(req.body.totalAmount * 100) // convert to cents
+        units: req.body.units || 1,
+        totalAmount: req.body.totalAmount // amount already in cents from frontend
       });
       
       const submission = await storage.createTaskSubmission(validatedData);

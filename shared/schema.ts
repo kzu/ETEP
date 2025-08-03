@@ -48,7 +48,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   type: taskTypeEnum("type").notNull(),
-  paymentAmount: integer("payment_amount").notNull(), // in cents (for recurring tasks: price per 30-minute block)
+  paymentAmount: integer("payment_amount").notNull(), // in cents (for recurring tasks: price per unit)
   assignedToIds: text("assigned_to_ids").array().default([]), // Array of user IDs, empty means available to all children
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   status: taskStatusEnum("status").notNull().default("available"),
@@ -60,7 +60,7 @@ export const taskSubmissions = pgTable("task_submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull().references(() => tasks.id),
   submittedById: varchar("submitted_by_id").notNull().references(() => users.id),
-  timeMinutes: integer("time_minutes").default(0), // for recurring tasks
+  units: integer("units").default(1), // number of units completed for recurring tasks
   totalAmount: integer("total_amount").notNull(), // calculated amount in cents
   status: taskStatusEnum("status").notNull().default("submitted"),
   submittedAt: timestamp("submitted_at").defaultNow(),

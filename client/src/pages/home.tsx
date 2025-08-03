@@ -99,7 +99,7 @@ export default function Home() {
   });
 
   // Task submission states
-  const [sessionTimes, setSessionTimes] = useState<Record<string, number>>({});
+  const [sessionUnits, setSessionUnits] = useState<Record<string, number>>({});
   
   // Invite child states
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -134,10 +134,10 @@ export default function Home() {
   });
 
   const submitTaskMutation = useMutation({
-    mutationFn: async ({ taskId, timeMinutes, totalAmount }: any) => {
+    mutationFn: async ({ taskId, units, totalAmount }: any) => {
       await apiRequest('POST', '/api/task-submissions', {
         taskId,
-        timeMinutes,
+        units,
         totalAmount
       });
     },
@@ -254,20 +254,14 @@ export default function Home() {
   // Helper functions
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-  const updateSessionTime = (taskId: string, change: number) => {
-    setSessionTimes(prev => ({
+  const updateSessionUnits = (taskId: string, change: number) => {
+    setSessionUnits(prev => ({
       ...prev,
-      [taskId]: Math.max(30, (prev[taskId] || 30) + change)
+      [taskId]: Math.max(1, (prev[taskId] || 1) + change)
     }));
   };
 
-  const getSessionTime = (taskId: string) => sessionTimes[taskId] || 30;
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}:${mins.toString().padStart(2, '0')}` : `${mins}min`;
-  };
+  const getSessionUnits = (taskId: string) => sessionUnits[taskId] || 1;
 
   if (authLoading || !user) {
     return (
@@ -537,7 +531,7 @@ export default function Home() {
                                 </Badge>
                                 <div className="text-sm font-medium text-gray-900 mt-1">
                                   {task.type === 'recurring' 
-                                    ? `${formatCurrency(task.paymentAmount)}/30min`
+                                    ? `${formatCurrency(task.paymentAmount)}/unidad`
                                     : formatCurrency(task.paymentAmount)
                                   }
                                 </div>
@@ -619,7 +613,7 @@ export default function Home() {
                           </div>
                           <Badge variant="secondary">
                             {task.type === 'recurring' 
-                              ? `${formatCurrency(task.paymentAmount)}/30min`
+                              ? `${formatCurrency(task.paymentAmount)}/unidad`
                               : formatCurrency(task.paymentAmount)
                             }
                           </Badge>
@@ -628,30 +622,27 @@ export default function Home() {
                         {task.type === 'recurring' && (
                           <div className="bg-gray-50 rounded-lg p-3 mb-3">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700">Bloques de tiempo:</span>
+                              <span className="text-sm font-medium text-gray-700">Unidades realizadas:</span>
                               <div className="flex items-center space-x-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="w-8 h-8 p-0"
-                                  onClick={() => updateSessionTime(task.id, -30)}
-                                  disabled={getSessionTime(task.id) <= 30}
+                                  onClick={() => updateSessionUnits(task.id, -1)}
+                                  disabled={getSessionUnits(task.id) <= 1}
                                 >
                                   <Minus className="h-3 w-3" />
                                 </Button>
                                 <div className="text-center">
                                   <div className="text-lg font-bold text-gray-900">
-                                    {getSessionTime(task.id) / 30} bloque{getSessionTime(task.id) > 30 ? 's' : ''}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {formatTime(getSessionTime(task.id))}
+                                    {getSessionUnits(task.id)} unidad{getSessionUnits(task.id) > 1 ? 'es' : ''}
                                   </div>
                                 </div>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="w-8 h-8 p-0"
-                                  onClick={() => updateSessionTime(task.id, 30)}
+                                  onClick={() => updateSessionUnits(task.id, 1)}
                                 >
                                   <Plus className="h-3 w-3" />
                                 </Button>
@@ -660,10 +651,10 @@ export default function Home() {
                             <div className="text-center">
                               <span className="text-sm text-gray-600">Total a ganar: </span>
                               <span className="font-bold text-accent">
-                                {formatCurrency((task.paymentAmount * getSessionTime(task.id)) / 30)}
+                                {formatCurrency(task.paymentAmount * getSessionUnits(task.id))}
                               </span>
                               <div className="text-xs text-gray-500 mt-1">
-                                {formatCurrency(task.paymentAmount)} × {getSessionTime(task.id) / 30} bloque{getSessionTime(task.id) > 30 ? 's' : ''}
+                                {formatCurrency(task.paymentAmount)} × {getSessionUnits(task.id)} unidad{getSessionUnits(task.id) > 1 ? 'es' : ''}
                               </div>
                             </div>
                           </div>
@@ -673,10 +664,10 @@ export default function Home() {
                           className="w-full"
                           onClick={() => submitTaskMutation.mutate({
                             taskId: task.id,
-                            timeMinutes: task.type === 'recurring' ? getSessionTime(task.id) : 0,
+                            units: task.type === 'recurring' ? getSessionUnits(task.id) : 1,
                             totalAmount: task.type === 'recurring' 
-                              ? (task.paymentAmount * getSessionTime(task.id)) / 30
-                              : task.paymentAmount / 100
+                              ? task.paymentAmount * getSessionUnits(task.id)
+                              : task.paymentAmount
                           })}
                           disabled={submitTaskMutation.isPending}
                         >
@@ -873,7 +864,7 @@ export default function Home() {
               </div>
               {taskForm.type === 'recurring' && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Para tareas recurrentes, esto es el pago por cada bloque de 30 minutos
+                  Para tareas recurrentes, esto es el pago por unidad
                 </p>
               )}
             </div>

@@ -18,6 +18,10 @@
 - Added "Nueva Tarea" button with modal popup for task creation
 - Implemented optional multiple child assignment for tasks (tasks can be assigned to all children or specific ones)
 - Updated database schema to use assignedToIds array instead of single assignedToId
+- Changed recurring tasks from time-based (30-minute blocks) to unit-based system
+- Tasks now use "units" instead of "time minutes" with flexible unit pricing
+- Updated UI to show "price per unit" for recurring tasks instead of "price per 30min"
+- Enhanced child interface to select number of units completed for recurring tasks
 
 # User Preferences
 
