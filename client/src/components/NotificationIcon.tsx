@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -113,6 +113,36 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
     }
   };
 
+  const handleInvitationAction = async (notificationId: string, invitationId: string, action: 'accept' | 'reject', event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      const endpoint = action === 'accept' 
+        ? `/api/family-invitations/${invitationId}/accept`
+        : `/api/family-invitations/${invitationId}/reject`;
+      
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} invitation`);
+      }
+      
+      // Mark notification as read after action
+      await markAsReadMutation.mutateAsync(notificationId);
+      
+      // Refresh page data if accepted (to show family updates)
+      if (action === 'accept') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing invitation:`, error);
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Notification Bell Icon */}
@@ -167,6 +197,27 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
                           locale: es
                         })}
                       </p>
+                      
+                      {/* Family invitation actions */}
+                      {notification.type === 'family_invitation' && notification.relatedId && (
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleInvitationAction(notification.id, notification.relatedId!, 'accept', e)}
+                            className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
+                          >
+                            Aceptar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => handleInvitationAction(notification.id, notification.relatedId!, 'reject', e)}
+                            className="h-7 px-3 text-xs"
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     
                     {!notification.isRead && (
@@ -174,10 +225,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleMarkAsRead(notification.id, e)}
-                        className="ml-2 p-1 h-6 w-6"
+                        className="ml-2 p-1 h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
                         disabled={markAsReadMutation.isPending}
+                        title="Marcar como leída"
                       >
-                        <X className="h-3 w-3" />
+                        <Check className="h-3 w-3" />
                       </Button>
                     )}
                   </div>

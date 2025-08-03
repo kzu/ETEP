@@ -452,6 +452,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/family-invitations/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      const invitation = await storage.getInvitationById(id);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      // Update invitation status to rejected
+      await storage.rejectInvitation(id);
+      
+      // Create notification for the parent
+      const user = await storage.getUser(userId);
+      const notification = await storage.createNotification({
+        userId: invitation.parentId,
+        type: 'invitation_rejected',
+        title: 'Invitación Rechazada',
+        message: `${user?.firstName || 'Un usuario'} ha rechazado la invitación familiar`,
+        relatedId: id
+      });
+      
+      // Broadcast real-time notification
+      broadcastNotificationToUser(invitation.parentId, notification);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error rejecting invitation:", error);
+      res.status(500).json({ message: "Failed to reject invitation" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Setup WebSocket server for real-time notifications

@@ -9,7 +9,9 @@
 - Added role-based access control for all features
 - Implemented real-time notification system with WebSocket support
 - Added notification icon with dropdown panel for real-time updates
-- Enhanced notification management with mark-as-read functionality
+- Enhanced notification management with mark-as-read functionality (✓ icon)
+- Added accept/reject actions for family invitations with parent notifications
+- Real-time family updates when invitations are accepted or rejected
 
 # User Preferences
 

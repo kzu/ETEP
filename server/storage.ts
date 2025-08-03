@@ -65,6 +65,7 @@ export interface IStorage {
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
   acceptInvitation(invitationId: string, childId: string): Promise<void>;
+  rejectInvitation(invitationId: string): Promise<void>;
   getUserByEmail(email: string): Promise<User | undefined>;
 }
 
@@ -268,6 +269,13 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ parentId: invitation.parentId, updatedAt: new Date() })
       .where(eq(users.id, childId));
+  }
+
+  async rejectInvitation(invitationId: string): Promise<void> {
+    // Update invitation status to rejected
+    await db.update(familyInvitations)
+      .set({ status: "rejected" })
+      .where(eq(familyInvitations.id, invitationId));
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
