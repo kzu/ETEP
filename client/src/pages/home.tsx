@@ -113,6 +113,17 @@ export default function Home() {
     queryKey: ["/api/notifications"],
   });
 
+  // Child task submissions history for Historial tab
+  const { data: childApprovedSubmissions, isLoading: childApprovedLoading } = useQuery({
+    queryKey: ["/api/task-submissions/approved"],
+    enabled: isChild,
+  });
+
+  const { data: childRejectedSubmissions, isLoading: childRejectedLoading } = useQuery({
+    queryKey: ["/api/task-submissions/rejected"],
+    enabled: isChild,
+  });
+
   // Auto-redirect to family management if no children and user is parent
   useEffect(() => {
     if (isParent && !childrenLoading && children && Array.isArray(children) && children.length === 0) {
@@ -197,6 +208,9 @@ export default function Home() {
   // Task management state
   const [activeTab, setActiveTab] = useState("disponibles");
   const [editingTask, setEditingTask] = useState<any>(null);
+  
+  // Mobile navigation state
+  const [mobileActiveTab, setMobileActiveTab] = useState<'inicio' | 'tareas' | 'historial'>('inicio');
 
   // Mutations
   const createTaskMutation = useMutation({
@@ -765,48 +779,54 @@ export default function Home() {
         ) : (
           /* Child Dashboard */
           <div>
-            <div className="mb-8">
-              <div className="flex items-center space-x-4 mb-4">
-                <img 
-                  src={user.profileImageUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80"} 
-                  alt={user.firstName} 
-                  className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg" 
-                />
+            {/* Mobile: Show content based on active tab */}
+            <div className="md:hidden">
+              {mobileActiveTab === 'inicio' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    ¡Hola {user.firstName || user.email}!
-                  </h2>
-                  <p className="text-gray-600">Ve tus tareas y ganancias</p>
-                </div>
-              </div>
-            </div>
+                  <div className="mb-8">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <img 
+                        src={user.profileImageUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80"} 
+                        alt={user.firstName} 
+                        className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg" 
+                      />
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          ¡Hola {user.firstName || user.email}!
+                        </h2>
+                        <p className="text-gray-600">Ve tus tareas y ganancias</p>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Balance Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Card className="bg-gradient-to-br from-secondary to-green-600 text-white p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold">Dinero Acumulado</h3>
-                  <PiggyBank className="h-8 w-8 opacity-80" />
+                  {/* Balance Cards */}
+                  <div className="grid grid-cols-1 gap-6 mb-8">
+                    <Card className="bg-gradient-to-br from-secondary to-green-600 text-white p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold">Dinero Acumulado</h3>
+                        <PiggyBank className="h-8 w-8 opacity-80" />
+                      </div>
+                      <p className="text-3xl font-bold">{formatCurrency(user.balance?.accumulated || 0)}</p>
+                      <p className="text-green-100 text-sm">Total ganado hasta ahora</p>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-accent to-yellow-600 text-white p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold">Pendiente de Pago</h3>
+                        <Clock className="h-8 w-8 opacity-80" />
+                      </div>
+                      <p className="text-3xl font-bold">{formatCurrency(user.balance?.pending || 0)}</p>
+                      <p className="text-yellow-100 text-sm">Esperando pago de papá</p>
+                    </Card>
+                  </div>
                 </div>
-                <p className="text-3xl font-bold">{formatCurrency(user.balance?.accumulated || 0)}</p>
-                <p className="text-green-100 text-sm">Total ganado hasta ahora</p>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-accent to-yellow-600 text-white p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold">Pendiente de Pago</h3>
-                  <Clock className="h-8 w-8 opacity-80" />
-                </div>
-                <p className="text-3xl font-bold">{formatCurrency(user.balance?.pending || 0)}</p>
-                <p className="text-yellow-100 text-sm">Esperando pago de papá</p>
-              </Card>
-            </div>
+              )}
 
-            {/* ListTodo and Notifications */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Available ListTodo */}
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Tareas Disponibles</h3>
+              {mobileActiveTab === 'tareas' && (
+                <div>
+                  {/* Available Tasks */}
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Tareas Disponibles</h3>
                 
                 <div className="space-y-4">
                   {tasksLoading ? (
@@ -902,11 +922,227 @@ export default function Home() {
                     ))
                   )}
                 </div>
-              </Card>
+                  </Card>
+                </div>
+              )}
 
-              {/* Notifications */}
-              <div className="space-y-6">
-                {/* Panel de notificaciones removido - se usa solo el icono desplegable */}
+              {mobileActiveTab === 'historial' && (
+                <div>
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Historial de Tareas</h3>
+                    
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="aprobadas">
+                          <span>Aprobadas</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="rechazadas">
+                          <span>Rechazadas</span>
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="aprobadas" className="mt-6 space-y-4">
+                        {childApprovedLoading ? (
+                          Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
+                        ) : !childApprovedSubmissions || childApprovedSubmissions.length === 0 ? (
+                          <p className="text-gray-500 text-center py-8">No hay tareas aprobadas</p>
+                        ) : (
+                          childApprovedSubmissions.map((submission: any) => (
+                            <div key={submission.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.units > 1 && `${submission.units} unidades • `}
+                                    {new Date(submission.submittedAt).toLocaleDateString('es-ES')}
+                                  </p>
+                                  <p className="text-sm text-green-600 font-medium">✓ Aprobada</p>
+                                </div>
+                                <span className="text-lg font-bold text-green-600">
+                                  {formatCurrency(submission.totalAmount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="rechazadas" className="mt-6 space-y-4">
+                        {childRejectedLoading ? (
+                          Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)
+                        ) : !childRejectedSubmissions || childRejectedSubmissions.length === 0 ? (
+                          <p className="text-gray-500 text-center py-8">No hay tareas rechazadas</p>
+                        ) : (
+                          childRejectedSubmissions.map((submission: any) => (
+                            <div key={submission.id} className="border border-red-200 bg-red-50 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.units > 1 && `${submission.units} unidades • `}
+                                    {new Date(submission.submittedAt).toLocaleDateString('es-ES')}
+                                  </p>
+                                  <p className="text-sm text-red-600 font-medium">✗ Rechazada</p>
+                                </div>
+                                <span className="text-lg font-bold text-red-600">
+                                  {formatCurrency(submission.totalAmount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </Card>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: Show original layout */}
+            <div className="hidden md:block">
+              <div className="mb-8">
+                <div className="flex items-center space-x-4 mb-4">
+                  <img 
+                    src={user.profileImageUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80"} 
+                    alt={user.firstName} 
+                    className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg" 
+                  />
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      ¡Hola {user.firstName || user.email}!
+                    </h2>
+                    <p className="text-gray-600">Ve tus tareas y ganancias</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <Card className="bg-gradient-to-br from-secondary to-green-600 text-white p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold">Dinero Acumulado</h3>
+                    <PiggyBank className="h-8 w-8 opacity-80" />
+                  </div>
+                  <p className="text-3xl font-bold">{formatCurrency(user.balance?.accumulated || 0)}</p>
+                  <p className="text-green-100 text-sm">Total ganado hasta ahora</p>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-accent to-yellow-600 text-white p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold">Pendiente de Pago</h3>
+                    <Clock className="h-8 w-8 opacity-80" />
+                  </div>
+                  <p className="text-3xl font-bold">{formatCurrency(user.balance?.pending || 0)}</p>
+                  <p className="text-yellow-100 text-sm">Esperando pago de papá</p>
+                </Card>
+              </div>
+
+              {/* Tasks and Notifications */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Available Tasks */}
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Tareas Disponibles</h3>
+                  
+                  <div className="space-y-4">
+                    {tasksLoading ? (
+                      Array(2).fill(0).map((_, i) => <Skeleton key={i} className="h-32" />)
+                    ) : assignedTasks?.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No hay tareas disponibles</p>
+                    ) : (
+                      assignedTasks?.map((task: any) => (
+                        <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium text-gray-900">{task.title}</h4>
+                                {multipleFamilies && task.family && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {task.family.name}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {task.type === 'recurring' ? 'Tarea recurrente' : 'Tarea de una vez'}
+                              </p>
+                              <p className="text-sm text-gray-500">{task.description}</p>
+                            </div>
+                            <Badge variant="secondary">
+                              {task.dailyLimit > 1 
+                                ? `${formatCurrency(task.paymentAmount)}/unidad`
+                                : formatCurrency(task.paymentAmount)
+                              }
+                            </Badge>
+                          </div>
+                          
+                          {(task.dailyLimit > 1) && (
+                            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">Unidades realizadas:</span>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-8 h-8 p-0"
+                                    onClick={() => updateSessionUnits(task.id, -1)}
+                                    disabled={getSessionUnits(task.id) <= 1}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <div className="text-center">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      {getSessionUnits(task.id)} unidad{getSessionUnits(task.id) > 1 ? 'es' : ''}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      máx. {task.dailyLimit} por día
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-8 h-8 p-0"
+                                    onClick={() => updateSessionUnits(task.id, 1)}
+                                    disabled={getSessionUnits(task.id) >= task.dailyLimit}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-sm text-gray-600">Total a ganar: </span>
+                                <span className="font-bold text-accent">
+                                  {formatCurrency(task.paymentAmount * getSessionUnits(task.id))}
+                                </span>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {formatCurrency(task.paymentAmount)} × {getSessionUnits(task.id)} unidad{getSessionUnits(task.id) > 1 ? 'es' : ''}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <Button 
+                            className="w-full"
+                            onClick={() => submitTaskMutation.mutate({
+                              taskId: task.id,
+                              units: task.dailyLimit > 1 ? getSessionUnits(task.id) : 1,
+                              totalAmount: task.dailyLimit > 1
+                                ? task.paymentAmount * getSessionUnits(task.id)
+                                : task.paymentAmount
+                            })}
+                            disabled={submitTaskMutation.isPending}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Enviar Tarea Completada
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </Card>
+
+                {/* Notifications */}
+                <div className="space-y-6">
+                  {/* Panel de notificaciones removido - se usa solo el icono desplegable */}
+                </div>
               </div>
             </div>
           </div>
@@ -916,21 +1152,26 @@ export default function Home() {
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
         <div className="flex justify-around py-2">
-          <button className="flex flex-col items-center py-2 px-4 text-primary">
+          <button 
+            onClick={() => setMobileActiveTab('inicio')}
+            className={`flex flex-col items-center py-2 px-4 ${mobileActiveTab === 'inicio' ? 'text-primary' : 'text-gray-400'}`}
+          >
             <HomeIcon className="h-5 w-5" />
             <span className="text-xs mt-1">Inicio</span>
           </button>
-          <button className="flex flex-col items-center py-2 px-4 text-gray-400">
+          <button 
+            onClick={() => setMobileActiveTab('tareas')}
+            className={`flex flex-col items-center py-2 px-4 ${mobileActiveTab === 'tareas' ? 'text-primary' : 'text-gray-400'}`}
+          >
             <ListTodo className="h-5 w-5" />
             <span className="text-xs mt-1">Tareas</span>
           </button>
-          <button className="flex flex-col items-center py-2 px-4 text-gray-400">
+          <button 
+            onClick={() => setMobileActiveTab('historial')}
+            className={`flex flex-col items-center py-2 px-4 ${mobileActiveTab === 'historial' ? 'text-primary' : 'text-gray-400'}`}
+          >
             <History className="h-5 w-5" />
             <span className="text-xs mt-1">Historial</span>
-          </button>
-          <button className="flex flex-col items-center py-2 px-4 text-gray-400">
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Perfil</span>
           </button>
         </div>
       </nav>
