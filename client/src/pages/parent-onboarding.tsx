@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,9 +24,18 @@ import {
 
 export default function ParentOnboarding() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [familyName, setFamilyName] = useState('');
   const [isWaitingForInvitation, setIsWaitingForInvitation] = useState(false);
+
+  // Set default family name when user data is loaded
+  useEffect(() => {
+    if (user && !familyName) {
+      const firstName = user.firstName || user.email.split('@')[0];
+      setFamilyName(`Familia de ${firstName}`);
+    }
+  }, [user, familyName]);
 
   // Fetch pending invitations for this user
   const { data: invitations, isLoading: invitationsLoading, refetch: refetchInvitations } = useQuery({
