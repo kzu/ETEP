@@ -95,6 +95,11 @@ export function NotificationIcon({ userId }: NotificationIconProps) {
         if (data.data?.type === 'task_submitted') {
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
         }
+        
+        // If it's a payment received notification, refresh user balance
+        if (data.data?.type === 'payment_received') {
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
       }
     };
 
