@@ -26,7 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Shield, User, Trash2, Crown, Clock } from "lucide-react";
+import { Users, UserPlus, Shield, User, Trash2, Crown, Clock, ArrowLeft, Home } from "lucide-react";
+import { Link } from "wouter";
 
 interface FamilyMember {
   id: string;
@@ -269,9 +270,17 @@ export default function FamilyManagement() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Users className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Gestión Familiar</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Gestión Familiar</h1>
+        </div>
+        <Link href="/">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Home className="h-4 w-4" />
+            Ir al Inicio
+          </Button>
+        </Link>
       </div>
 
       {/* Family Info */}
