@@ -946,7 +946,7 @@ export default function Home() {
                                 return { border: 'border-green-200 bg-green-50', text: 'text-green-600', icon: '✓', label: 'Aprobada' };
                               case 'rejected':
                                 return { border: 'border-red-200 bg-red-50', text: 'text-red-600', icon: '✗', label: 'Rechazada' };
-                              case 'pending':
+                              case 'submitted':
                                 return { border: 'border-yellow-200 bg-yellow-50', text: 'text-yellow-600', icon: '⏳', label: 'Pendiente' };
                               default:
                                 return { border: 'border-gray-200 bg-gray-50', text: 'text-gray-600', icon: '?', label: 'Desconocido' };
