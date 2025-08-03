@@ -73,11 +73,12 @@ export default function Home() {
   const currentFamilyRole = (user as any)?.currentFamilyRole;
   const isParent = currentFamilyRole && currentFamilyRole !== 'child';
   const isChild = currentFamilyRole === 'child';
+  const isCollaborator = currentFamilyRole === 'collaborator';
 
   // Queries
   const { data: children, isLoading: childrenLoading } = useQuery({
     queryKey: ["/api/children"],
-    enabled: isParent,
+    enabled: isParent || isCollaborator,
   });
 
   const { data: assignedTasksData, isLoading: tasksLoading } = useQuery({
@@ -90,22 +91,22 @@ export default function Home() {
 
   const { data: pendingSubmissions, isLoading: submissionsLoading } = useQuery({
     queryKey: ["/api/task-submissions/pending"],
-    enabled: isParent,
+    enabled: isParent || isCollaborator,
   });
 
   const { data: approvedSubmissions, isLoading: approvedLoading } = useQuery({
     queryKey: ["/api/task-submissions/approved"],
-    enabled: isParent,
+    enabled: isParent || isCollaborator,
   });
 
   const { data: rejectedSubmissions, isLoading: rejectedLoading } = useQuery({
     queryKey: ["/api/task-submissions/rejected"],
-    enabled: isParent,
+    enabled: isParent || isCollaborator,
   });
 
   const { data: createdTasks, isLoading: createdTasksLoading } = useQuery({
     queryKey: ["/api/tasks"],
-    enabled: isParent,
+    enabled: isParent || isCollaborator,
   });
 
   const { data: notifications, isLoading: notificationsLoading } = useQuery({

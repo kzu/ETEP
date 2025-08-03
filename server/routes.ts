@@ -133,7 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== 'parent' && user.role !== 'child')) {
+      // Check if user has permission to view children (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && user.role !== 'child' && userFamilyRole !== 'collaborator')) {
         return res.status(403).json({ message: "Access denied" });
       }
       
