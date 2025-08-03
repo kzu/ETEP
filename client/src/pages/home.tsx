@@ -599,9 +599,6 @@ export default function Home() {
                             <span className="text-lg font-bold text-green-600">
                               {formatCurrency(submission.totalAmount)}
                             </span>
-                            <Badge variant="secondary" className="block mt-1 bg-green-100 text-green-800">
-                              <Check className="mr-1 h-3 w-3" /> Aprobada
-                            </Badge>
                           </div>
                         </div>
                       </div>
@@ -628,9 +625,6 @@ export default function Home() {
                             <span className="text-lg font-bold text-red-600">
                               {formatCurrency(submission.totalAmount)}
                             </span>
-                            <Badge variant="destructive" className="block mt-1">
-                              <X className="mr-1 h-3 w-3" /> Rechazada
-                            </Badge>
                           </div>
                         </div>
                       </div>
