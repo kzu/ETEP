@@ -41,7 +41,6 @@ export const users = pgTable("users", {
 });
 
 export const taskTypeEnum = pgEnum("task_type", ["oneTime", "recurring"]);
-export const paymentTypeEnum = pgEnum("payment_type", ["perTask", "perUnit"]);
 export const taskStatusEnum = pgEnum("task_status", ["available", "submitted", "approved", "rejected"]);
 export const parentRoleEnum = pgEnum("parent_role", ["admin", "collaborator"]);
 
@@ -51,8 +50,8 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   type: taskTypeEnum("type").notNull(),
-  paymentType: paymentTypeEnum("payment_type").notNull().default("perTask"), // Independent of recurring/oneTime
-  paymentAmount: integer("payment_amount").notNull(), // Amount per task or per unit based on paymentType
+  dailyLimit: integer("daily_limit").notNull().default(1), // Daily limit for task completion, determines if +/- controls are shown
+  paymentAmount: integer("payment_amount").notNull(), // Amount per task or per unit based on dailyLimit
   assignedToIds: text("assigned_to_ids").array().default([]), // Array of user IDs, empty means available to all children
   createdById: varchar("created_by_id").notNull().references(() => users.id),
   status: taskStatusEnum("status").notNull().default("available"),
