@@ -456,18 +456,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      // Check if user has permission to view approved submissions (parent role or collaborator in family)
       const userFamilyRole = await storage.getUserFamilyRole(userId);
-      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
-        return res.status(403).json({ message: "Only parents and collaborators can view approved submissions" });
-      }
-      
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
         return res.status(400).json({ message: "User not part of any family" });
       }
       
-      const submissions = await storage.getTaskSubmissionsByStatus(familyId, 'approved');
+      // Allow parents, collaborators, and children to view submissions
+      // But children can only see their own submissions
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator' && userFamilyRole !== 'child')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      let submissions;
+      if (userFamilyRole === 'child') {
+        // Children can only see their own approved submissions
+        submissions = await storage.getTaskSubmissionsByStatusAndUser(familyId, 'approved', userId);
+      } else {
+        // Parents and collaborators can see all approved submissions
+        submissions = await storage.getTaskSubmissionsByStatus(familyId, 'approved');
+      }
+      
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching approved submissions:", error);
@@ -480,18 +489,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      // Check if user has permission to view rejected submissions (parent role or collaborator in family)
       const userFamilyRole = await storage.getUserFamilyRole(userId);
-      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
-        return res.status(403).json({ message: "Only parents and collaborators can view rejected submissions" });
-      }
-      
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
         return res.status(400).json({ message: "User not part of any family" });
       }
       
-      const submissions = await storage.getTaskSubmissionsByStatus(familyId, 'rejected');
+      // Allow parents, collaborators, and children to view submissions
+      // But children can only see their own submissions
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator' && userFamilyRole !== 'child')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      let submissions;
+      if (userFamilyRole === 'child') {
+        // Children can only see their own rejected submissions
+        submissions = await storage.getTaskSubmissionsByStatusAndUser(familyId, 'rejected', userId);
+      } else {
+        // Parents and collaborators can see all rejected submissions
+        submissions = await storage.getTaskSubmissionsByStatus(familyId, 'rejected');
+      }
+      
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching rejected submissions:", error);
