@@ -124,6 +124,7 @@ export default function FamilyManagement() {
       setInviteEmail("");
       setInviteRole("child");
       queryClient.invalidateQueries({ queryKey: ['/api/family'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family/invitations/pending'] });
     },
     onError: (error: any) => {
       toast({
