@@ -59,6 +59,11 @@ export default function FamilyManagement() {
     select: (data) => data as { family: Family; members: FamilyMember[] }
   });
 
+  // Get current user info
+  const { data: user } = useQuery({
+    queryKey: ['/api/auth/user']
+  });
+
   // Fetch pending invitations sent from this family
   const { data: pendingInvitations, isLoading: invitationsLoading } = useQuery({
     queryKey: ['/api/family/invitations/pending'],
@@ -216,6 +221,10 @@ export default function FamilyManagement() {
   const adminMembers = members.filter(m => m.role === 'admin');
   const collaboratorMembers = members.filter(m => m.role === 'collaborator');
   const childMembers = members.filter(m => m.role === 'child');
+  
+  // Get current user's role in the family
+  const currentUserMember = members.find(m => m.userId === user?.id);
+  const userRole = currentUserMember?.role;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -234,57 +243,60 @@ export default function FamilyManagement() {
         </CardHeader>
       </Card>
 
-      {/* Invite New Member */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Invitar Nuevo Miembro
-          </CardTitle>
-          <CardDescription>
-            Invita a otra persona a unirse a tu familia
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSendInvite} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="email@ejemplo.com"
-                  required
-                />
+      {/* Invite New Member - Only for Admins */}
+      {userRole === 'admin' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Invitar Nuevo Miembro
+            </CardTitle>
+            <CardDescription>
+              Invita a otra persona a unirse a tu familia
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSendInvite} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="email@ejemplo.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Rol</Label>
+                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="collaborator">Colaborador</SelectItem>
+                      <SelectItem value="child">Hijo/a</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Rol</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="collaborator">Colaborador</SelectItem>
-                    <SelectItem value="child">Hijo/a</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button 
-              type="submit" 
-              disabled={inviteMutation.isPending || !inviteEmail.trim()}
-            >
-              {inviteMutation.isPending ? "Enviando..." : "Enviar Invitación"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button 
+                type="submit" 
+                disabled={inviteMutation.isPending || !inviteEmail.trim()}
+              >
+                {inviteMutation.isPending ? "Enviando..." : "Enviar Invitación"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Pending Invitations */}
-      <Card>
+      {/* Pending Invitations - Only for Admins */}
+      {userRole === 'admin' && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -331,7 +343,8 @@ export default function FamilyManagement() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Family Members */}
       <Card>
@@ -372,6 +385,7 @@ export default function FamilyManagement() {
                       <Select
                         value={member.role}
                         onValueChange={(newRole) => handleChangeRole(member.userId, newRole)}
+                        disabled={member.userId === user?.id} // Disable for current user
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
@@ -383,12 +397,13 @@ export default function FamilyManagement() {
                         </SelectContent>
                       </Select>
                       
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
+                      {member.userId !== user?.id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>¿Remover miembro?</AlertDialogTitle>
@@ -406,7 +421,8 @@ export default function FamilyManagement() {
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
-                      </AlertDialog>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -446,6 +462,7 @@ export default function FamilyManagement() {
                         <Select
                           value={member.role}
                           onValueChange={(newRole) => handleChangeRole(member.userId, newRole)}
+                          disabled={member.userId === user?.id || userRole !== 'admin'}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
@@ -457,12 +474,13 @@ export default function FamilyManagement() {
                           </SelectContent>
                         </Select>
                         
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
+                        {userRole === 'admin' && member.userId !== user?.id && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>¿Remover miembro?</AlertDialogTitle>
@@ -480,7 +498,8 @@ export default function FamilyManagement() {
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
-                        </AlertDialog>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -521,6 +540,7 @@ export default function FamilyManagement() {
                         <Select
                           value={member.role}
                           onValueChange={(newRole) => handleChangeRole(member.userId, newRole)}
+                          disabled={member.userId === user?.id || userRole !== 'admin'}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
@@ -532,30 +552,32 @@ export default function FamilyManagement() {
                           </SelectContent>
                         </Select>
                         
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Remover miembro?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción no se puede deshacer. El miembro será removido de la familia.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleRemoveMember(member.userId)}
-                                className="bg-destructive hover:bg-destructive/90"
-                              >
-                                Remover
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {userRole === 'admin' && member.userId !== user?.id && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Remover miembro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción no se puede deshacer. El miembro será removido de la familia.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleRemoveMember(member.userId)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Remover
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -781,6 +781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only administrators can change member roles" });
       }
 
+      // Prevent admin from changing their own role
+      if (memberId === userId) {
+        return res.status(403).json({ message: "Administrators cannot change their own role" });
+      }
+
       // Validate new role
       if (!['admin', 'collaborator', 'child'].includes(newRole)) {
         return res.status(400).json({ message: "Invalid role specified" });
