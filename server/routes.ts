@@ -302,8 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If approved, update child's balance
       if (action === 'approve') {
-        const submissions = await storage.getTaskSubmissionsByUser(userId);
-        const submission = submissions.find(s => s.id === id);
+        const submission = await storage.getTaskSubmissionById(id);
         
         if (submission) {
           const childBalance = await storage.getBalance(submission.submittedById);
