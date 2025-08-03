@@ -567,18 +567,26 @@ export default function Home() {
                     <p className="text-gray-500 text-center py-8">No hay tareas aprobadas</p>
                   ) : (
                     getTaskSubmissionsByStatus('approved').map((submission: any) => (
-                      <div key={submission.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
-                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName || submission.submittedBy?.email}</p>
-                            <p className="text-sm text-gray-500">
-                              {submission.units > 1 && `${submission.units} unidades • `}
-                              Aprobada el {new Date(submission.reviewedAt).toLocaleDateString('es-ES')}
+                      <div key={submission.id} className="border border-green-200 bg-green-50 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900">
+                              <span className="font-medium">{submission.task?.title || 'Tarea completada'}</span>
+                              {' '}by{' '}
+                              <span className="font-medium">{submission.submittedBy?.firstName || submission.submittedBy?.email}</span>
+                              {submission.units > 1 && ` (x${submission.units})`}
+                              {' '}approved{' '}
+                              <span className="text-gray-600">{new Date(submission.reviewedAt).toLocaleDateString('es-ES')}</span>
+                              {submission.reviewedBy && (
+                                <>
+                                  {' '}by{' '}
+                                  <span className="font-medium">{submission.reviewedBy?.firstName || submission.reviewedBy?.email}</span>
+                                </>
+                              )}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <span className="text-lg font-bold text-green-600">
+                          <div className="ml-4">
+                            <span className="text-sm font-bold text-green-600">
                               {formatCurrency(submission.totalAmount)}
                             </span>
                           </div>
@@ -593,18 +601,26 @@ export default function Home() {
                     <p className="text-gray-500 text-center py-8">No hay tareas rechazadas</p>
                   ) : (
                     getTaskSubmissionsByStatus('rejected').map((submission: any) => (
-                      <div key={submission.id} className="border border-red-200 bg-red-50 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{submission.task?.title || 'Tarea completada'}</h4>
-                            <p className="text-sm text-gray-600">Por {submission.submittedBy?.firstName || submission.submittedBy?.email}</p>
-                            <p className="text-sm text-gray-500">
-                              {submission.units > 1 && `${submission.units} unidades • `}
-                              Rechazada el {new Date(submission.reviewedAt).toLocaleDateString('es-ES')}
+                      <div key={submission.id} className="border border-red-200 bg-red-50 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900">
+                              <span className="font-medium">{submission.task?.title || 'Tarea completada'}</span>
+                              {' '}by{' '}
+                              <span className="font-medium">{submission.submittedBy?.firstName || submission.submittedBy?.email}</span>
+                              {submission.units > 1 && ` (x${submission.units})`}
+                              {' '}rejected{' '}
+                              <span className="text-gray-600">{new Date(submission.reviewedAt).toLocaleDateString('es-ES')}</span>
+                              {submission.reviewedBy && (
+                                <>
+                                  {' '}by{' '}
+                                  <span className="font-medium">{submission.reviewedBy?.firstName || submission.reviewedBy?.email}</span>
+                                </>
+                              )}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <span className="text-lg font-bold text-red-600">
+                          <div className="ml-4">
+                            <span className="text-sm font-bold text-red-600">
                               {formatCurrency(submission.totalAmount)}
                             </span>
                           </div>
