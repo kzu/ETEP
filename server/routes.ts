@@ -533,6 +533,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Broadcast task status update to all parents and collaborators in the family
+      const familyMembers = await storage.getFamilyMembers(familyId);
+      const parentsAndCollaborators = familyMembers.filter(member => 
+        member.role === 'admin' || member.role === 'collaborator'
+      ).map(member => member.user);
+      
+      for (const parentOrCollaborator of parentsAndCollaborators) {
+        // Skip the user who performed the action (they'll see the update immediately)
+        if (parentOrCollaborator.id !== userId) {
+          broadcastNotificationToUser(parentOrCollaborator.id, {
+            type: 'task_status_updated',
+            submissionId: id,
+            action: action
+          });
+        }
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error reviewing task submission:", error);

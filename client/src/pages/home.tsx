@@ -148,6 +148,13 @@ export default function Home() {
             queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
             queryClient.invalidateQueries({ queryKey: ["/api/tasks/assigned"] });
           }
+        } else if (data.type === 'task_status_updated') {
+          console.log("Task status updated, refreshing task submissions");
+          // Refresh all task submission related queries
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/children"] }); // Refresh children balance data
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
