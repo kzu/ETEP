@@ -187,6 +187,8 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      // Invalidate auth user data to update child balance cards
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       // Auto-switch to the appropriate tab
       if (action === 'approve') {
@@ -216,6 +218,7 @@ export default function Home() {
     onSuccess: () => {
       toast({ title: "Éxito", description: "Pago enviado. El hijo debe confirmarlo." });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
