@@ -323,6 +323,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTask(taskId: string, familyId: string): Promise<void> {
+    // First delete all related task submissions
+    await db.delete(taskSubmissions).where(eq(taskSubmissions.taskId, taskId));
+    
+    // Then delete the task
     await db.delete(tasks).where(and(
       eq(tasks.id, taskId),
       eq(tasks.familyId, familyId)
