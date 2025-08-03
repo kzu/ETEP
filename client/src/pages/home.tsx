@@ -79,6 +79,11 @@ export default function Home() {
     enabled: user?.role === 'parent',
   });
 
+  const { data: createdTasks, isLoading: createdTasksLoading } = useQuery({
+    queryKey: ["/api/tasks"],
+    enabled: user?.role === 'parent',
+  });
+
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["/api/notifications"],
   });
@@ -98,6 +103,9 @@ export default function Home() {
   // Invite child states
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  
+  // Task creation modal state
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
   // Mutations
   const createTaskMutation = useMutation({
@@ -107,6 +115,7 @@ export default function Home() {
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea creada exitosamente" });
       setTaskForm({ title: '', description: '', type: 'oneTime', paymentAmount: '', assignedToId: '' });
+      setShowCreateTaskModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
     onError: (error) => {
@@ -472,91 +481,68 @@ export default function Home() {
 
               {/* Create Task */}
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Crear Nueva Tarea</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Título de la Tarea</Label>
-                    <Input
-                      id="title"
-                      value={taskForm.title}
-                      onChange={(e) => setTaskForm(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Ej: Lavar los platos"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="assignedTo">Asignar a</Label>
-                    <Select value={taskForm.assignedToId} onValueChange={(value) => setTaskForm(prev => ({ ...prev, assignedToId: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar hijo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {children?.map((child: any) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.firstName || child.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Tipo de Tarea</Label>
-                    <RadioGroup 
-                      value={taskForm.type} 
-                      onValueChange={(value) => setTaskForm(prev => ({ ...prev, type: value }))}
-                      className="flex space-x-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="oneTime" id="oneTime" />
-                        <Label htmlFor="oneTime">Una vez</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="recurring" id="recurring" />
-                        <Label htmlFor="recurring">Recurrente</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="payment">Pago por Tarea</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-gray-500">$</span>
-                      <Input
-                        id="payment"
-                        type="number"
-                        step="0.01"
-                        className="pl-8"
-                        value={taskForm.paymentAmount}
-                        onChange={(e) => setTaskForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Para tareas recurrentes: pago por cada 30 minutos
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="description">Descripción (opcional)</Label>
-                    <Textarea
-                      id="description"
-                      value={taskForm.description}
-                      onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Instrucciones adicionales..."
-                      rows={3}
-                    />
-                  </div>
-                  
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Tareas Disponibles</h3>
                   <Button 
-                    className="w-full" 
-                    onClick={() => createTaskMutation.mutate(taskForm)}
-                    disabled={!taskForm.title || !taskForm.assignedToId || !taskForm.paymentAmount || createTaskMutation.isPending}
+                    onClick={() => setShowCreateTaskModal(true)}
+                    size="sm"
+                    className="flex items-center space-x-2"
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Crear Tarea
+                    <Plus className="h-4 w-4" />
+                    <span>Nueva Tarea</span>
                   </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {createdTasksLoading ? (
+                    Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-20" />)
+                  ) : !createdTasks?.length ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <ListTodo className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                      <p>No hay tareas creadas</p>
+                      <p className="text-sm">Haz clic en "Nueva Tarea" para crear una</p>
+                    </div>
+                  ) : (
+                    createdTasks?.map((task: any) => {
+                      const assignedChild = children?.find((child: any) => child.id === task.assignedToId);
+                      return (
+                        <div 
+                          key={task.id} 
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{task.title}</h4>
+                                <p className="text-sm text-gray-600">
+                                  Asignada a: {assignedChild?.firstName || assignedChild?.email || 'Usuario no encontrado'}
+                                </p>
+                                {task.description && (
+                                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <Badge variant={task.status === 'available' ? 'secondary' : task.status === 'submitted' ? 'default' : 'outline'}>
+                                  {task.status === 'available' ? 'Disponible' : 
+                                   task.status === 'submitted' ? 'Enviada' : 
+                                   task.status === 'approved' ? 'Aprobada' : 'Rechazada'}
+                                </Badge>
+                                <div className="text-sm font-medium text-gray-900 mt-1">
+                                  {task.type === 'recurring' 
+                                    ? `${formatCurrency(task.paymentAmount)}/30min`
+                                    : formatCurrency(task.paymentAmount)
+                                  }
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {task.type === 'recurring' ? 'Recurrente' : 'Una vez'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </Card>
             </div>
@@ -776,6 +762,113 @@ export default function Home() {
                     Enviar Invitación
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Task Modal */}
+      <Dialog open={showCreateTaskModal} onOpenChange={setShowCreateTaskModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear Nueva Tarea</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="modal-title">Título de la Tarea</Label>
+              <Input
+                id="modal-title"
+                value={taskForm.title}
+                onChange={(e) => setTaskForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Ej: Lavar los platos"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="modal-assignedTo">Asignar a</Label>
+              <Select value={taskForm.assignedToId} onValueChange={(value) => setTaskForm(prev => ({ ...prev, assignedToId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar hijo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {children?.map((child: any) => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {child.firstName || child.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Tipo de Tarea</Label>
+              <RadioGroup 
+                value={taskForm.type} 
+                onValueChange={(value) => setTaskForm(prev => ({ ...prev, type: value }))}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="oneTime" id="modal-oneTime" />
+                  <Label htmlFor="modal-oneTime">Una vez</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="recurring" id="modal-recurring" />
+                  <Label htmlFor="modal-recurring">Recurrente</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div>
+              <Label htmlFor="modal-payment">Pago por Tarea</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-gray-500">$</span>
+                <Input
+                  id="modal-payment"
+                  type="number"
+                  step="0.01"
+                  className="pl-8"
+                  value={taskForm.paymentAmount}
+                  onChange={(e) => setTaskForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
+                  placeholder="0.00"
+                />
+              </div>
+              {taskForm.type === 'recurring' && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Para tareas recurrentes, esto es el pago por cada bloque de 30 minutos
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="modal-description">Descripción (opcional)</Label>
+              <Textarea
+                id="modal-description"
+                value={taskForm.description}
+                onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Instrucciones adicionales..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => setShowCreateTaskModal(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => createTaskMutation.mutate({
+                  ...taskForm,
+                  paymentAmount: Math.round(parseFloat(taskForm.paymentAmount) * 100)
+                })}
+                disabled={createTaskMutation.isPending || !taskForm.title || !taskForm.assignedToId || !taskForm.paymentAmount}
+                className="flex-1"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Crear Tarea
               </Button>
             </div>
           </div>
