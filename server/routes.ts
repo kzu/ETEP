@@ -506,11 +506,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
         // For users not in a family, get notifications without familyId filter
+        console.log(`Getting notifications for user ${userId} without family`);
         const notifications = await storage.getNotificationsByUserWithoutFamily(userId);
+        console.log(`Found ${notifications.length} notifications for user without family`);
         return res.json(notifications);
       }
       
+      console.log(`Getting notifications for user ${userId} with family ${familyId}`);
       const notifications = await storage.getNotificationsByUser(userId, familyId);
+      console.log(`Found ${notifications.length} notifications for user with family`);
       res.json(notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -621,6 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Try to find the invitee user by email and create notification if they exist
       const inviteeUser = await storage.getUserByEmail(inviteeEmail);
+      console.log(`Creating invitation for ${inviteeEmail}, found user:`, inviteeUser?.id);
       if (inviteeUser) {
         const roleText = inviteeRole === 'admin' ? 'Administrador' : 
                         inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
@@ -633,6 +638,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: "family_invitation",
           relatedId: invitation.id
         });
+        
+        console.log(`Created notification for user ${inviteeUser.id}:`, notification.id);
         
         // Broadcast real-time notification with family information
         broadcastNotificationToUser(inviteeUser.id, {
@@ -660,7 +667,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User email not found" });
       }
 
+      console.log(`Fetching invitations for user ${userId} with email ${user.email}`);
       const invitations = await storage.getInvitationsByEmail(user.email);
+      console.log(`Found ${invitations.length} invitations:`, invitations.map(i => i.id));
       res.json(invitations);
     } catch (error) {
       console.error("Error fetching invitations:", error);
