@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a task
+  // Update a task (template)
   app.patch('/api/tasks/:taskId', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -110,17 +110,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingTask = await storage.getTaskById(taskId);
       if (!existingTask || existingTask.createdById !== userId) {
         return res.status(404).json({ message: 'Task not found or not authorized' });
-      }
-      
-      // Only allow updating available tasks (never completed/submitted tasks)
-      if (existingTask.status !== 'available') {
-        return res.status(400).json({ message: 'Can only edit available tasks. Completed tasks cannot be modified to preserve financial integrity.' });
-      }
-
-      // Check if task has any submissions (even if rejected) - these should not be editable
-      const taskSubmissions = await storage.getTaskSubmissionsByTask(taskId);
-      if (taskSubmissions.length > 0) {
-        return res.status(400).json({ message: 'Cannot edit tasks that have submissions. This preserves historical financial data.' });
       }
       
       const updatedTask = await storage.updateTask(taskId, {
@@ -135,6 +124,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating task:', error);
       res.status(500).json({ message: 'Failed to update task' });
+    }
+  });
+
+  // Delete a task (template)
+  app.delete('/api/tasks/:taskId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { taskId } = req.params;
+      
+      // Get the existing task to verify ownership
+      const existingTask = await storage.getTaskById(taskId);
+      if (!existingTask || existingTask.createdById !== userId) {
+        return res.status(404).json({ message: 'Task not found or not authorized' });
+      }
+      
+      await storage.deleteTask(taskId);
+      res.json({ message: 'Task deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      res.status(500).json({ message: 'Failed to delete task' });
     }
   });
 

@@ -241,6 +241,29 @@ export default function Home() {
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      await apiRequest('DELETE', `/api/tasks/${taskId}`, {});
+    },
+    onSuccess: () => {
+      toast({ title: "Éxito", description: "Tarea eliminada exitosamente" });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setEditingTask(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Iniciando sesión nuevamente...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "No se pudo eliminar la tarea", variant: "destructive" });
+    },
+  });
+
   const confirmPaymentMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       await apiRequest('PATCH', `/api/payments/${paymentId}/confirm`, {});
@@ -664,14 +687,26 @@ export default function Home() {
                                       {task.type === 'recurring' ? 'Recurrente' : 'Una vez'}
                                     </div>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => setEditingTask(task)}
-                                  >
-                                    Editar
-                                  </Button>
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditingTask(task)}
+                                    >
+                                      Editar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => {
+                                        if (confirm('¿Estás seguro de eliminar esta tarea? Esta acción no afectará las tareas ya completadas por los hijos.')) {
+                                          deleteTaskMutation.mutate(task.id);
+                                        }
+                                      }}
+                                    >
+                                      Eliminar
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1173,6 +1208,17 @@ export default function Home() {
                   onClick={() => setEditingTask(null)}
                 >
                   Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm('¿Eliminar esta tarea? No afectará las tareas completadas.')) {
+                      deleteTaskMutation.mutate(editingTask.id);
+                    }
+                  }}
+                  disabled={deleteTaskMutation.isPending}
+                >
+                  Eliminar
                 </Button>
               </div>
             </div>

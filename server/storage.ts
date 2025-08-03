@@ -39,6 +39,7 @@ export interface IStorage {
   getTasksByCreator(creatorId: string): Promise<Task[]>;
   getTaskById(taskId: string): Promise<Task | undefined>;
   updateTask(taskId: string, updates: Partial<InsertTask>): Promise<Task>;
+  deleteTask(taskId: string): Promise<void>;
   updateTaskStatus(taskId: string, status: string): Promise<void>;
   
   // Task submission operations
@@ -153,6 +154,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.id, taskId))
       .returning();
     return updatedTask;
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, taskId));
   }
 
   async updateTaskStatus(taskId: string, status: string): Promise<void> {
