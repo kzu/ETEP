@@ -26,6 +26,7 @@ import {
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { createHash } from "crypto";
+import { nanoid } from "nanoid";
 
 // Interface for storage operations
 export interface IStorage {
