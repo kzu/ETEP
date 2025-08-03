@@ -259,6 +259,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const task = await storage.createTask(validatedData);
+      
+      // Broadcast notification to family about new task
+      broadcastNotificationToFamily(familyId, {
+        type: 'task_created',
+        taskId: task.id,
+        taskTitle: task.title,
+        createdBy: user.firstName || user.email,
+        createdByUserId: userId
+      });
+      
       res.json(task);
     } catch (error) {
       console.error("Error creating task:", error);

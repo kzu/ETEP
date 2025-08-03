@@ -126,6 +126,43 @@ export default function Home() {
     }
   }, [isParent, children, childrenLoading, setLocation, toast]);
 
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+      socket.send(JSON.stringify({ type: 'auth', userId: user.id }));
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'notification') {
+          if (data.data?.type === 'task_created') {
+            console.log("New task created, refreshing tasks");
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks/assigned"] });
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [user?.id, queryClient]);
+
   // Task creation form state
   const [taskForm, setTaskForm] = useState({
     title: '',
