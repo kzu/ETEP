@@ -21,6 +21,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
+import { createHash } from "crypto";
 
 // Interface for storage operations
 export interface IStorage {
@@ -69,6 +70,14 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
 }
 
+// Helper function to generate Gravatar URL
+function generateGravatarUrl(email: string): string {
+  const trimmedEmail = email.trim().toLowerCase();
+  const hash = createHash('md5').update(trimmedEmail).digest('hex');
+  // Use default=identicon for unique default avatars, size 200
+  return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=200`;
+}
+
 export class DatabaseStorage implements IStorage {
   // User operations
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
@@ -79,14 +88,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Generate Gravatar URL if email is provided and no profile image exists
+    const dataWithGravatar = {
+      ...userData,
+      profileImageUrl: userData.profileImageUrl || generateGravatarUrl(userData.email),
+      updatedAt: new Date(),
+    };
+
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values(dataWithGravatar)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
-          updatedAt: new Date(),
+          ...dataWithGravatar,
+          // Always refresh Gravatar URL on login
+          profileImageUrl: generateGravatarUrl(userData.email),
         },
       })
       .returning();
