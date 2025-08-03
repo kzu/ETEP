@@ -216,7 +216,7 @@ export default function Home() {
       await apiRequest('POST', '/api/payments', { toUserId, amount });
     },
     onSuccess: () => {
-      toast({ title: "Éxito", description: "Pago enviado. El hijo debe confirmarlo." });
+      toast({ title: "Success", description: "Payment sent. The child must confirm it." });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
@@ -364,25 +364,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Role Toggle */}
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                <Button
-                  variant={currentView === 'parent' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setCurrentView('parent')}
-                  disabled={user.role !== 'parent'}
-                >
-                  Padre
-                </Button>
-                <Button
-                  variant={currentView === 'child' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setCurrentView('child')}
-                  disabled={user.role !== 'child'}
-                >
-                  Hijo
-                </Button>
-              </div>
+
               
               {/* Notification Icon */}
               <NotificationIcon userId={user.id} />
@@ -418,7 +400,7 @@ export default function Home() {
           <div>
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Panel de Control Familiar</h2>
-              <p className="text-gray-600">Gestiona las tareas y pagos de tus hijos</p>
+              <p className="text-gray-600">Manage tasks and payments for your children</p>
             </div>
 
             {/* Children Overview */}
@@ -437,7 +419,7 @@ export default function Home() {
                         />
                         <div>
                           <h3 className="font-semibold text-gray-900">{child.firstName || child.email}</h3>
-                          <p className="text-sm text-gray-500">Hijo</p>
+                          <p className="text-sm text-gray-500">Child</p>
                         </div>
                       </div>
                       
@@ -479,8 +461,8 @@ export default function Home() {
                   >
                     <div className="flex flex-col items-center justify-center text-center h-full">
                       <UserPlus className="h-12 w-12 text-gray-400 mb-3" />
-                      <h3 className="font-medium text-gray-900 mb-1">Agregar Hijo</h3>
-                      <p className="text-sm text-gray-500">Invita a otro hijo a la app</p>
+                      <h3 className="font-medium text-gray-900 mb-1">Add Child</h3>
+                      <p className="text-sm text-gray-500">Invite another child to the app</p>
                     </div>
                   </Card>
                 </>
@@ -707,7 +689,7 @@ export default function Home() {
                                       size="sm"
                                       variant="destructive"
                                       onClick={() => {
-                                        if (confirm('¿Estás seguro de eliminar esta tarea? Esta acción no afectará las tareas ya completadas por los hijos.')) {
+                                        if (confirm('Are you sure you want to delete this task? This action will not affect tasks already completed by children.')) {
                                           deleteTaskMutation.mutate(task.id);
                                         }
                                       }}
@@ -895,22 +877,22 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <UserPlus className="h-5 w-5" />
-              <span>Invitar Hijo</span>
+              <span>Invite Child</span>
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="inviteEmail">Email del hijo</Label>
+              <Label htmlFor="inviteEmail">Child's Email</Label>
               <Input
                 id="inviteEmail"
                 type="email"
-                placeholder="hijo@ejemplo.com"
+                placeholder="child@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
               <p className="text-xs text-gray-500">
-                Tu hijo recibirá una invitación para unirse a la familia cuando inicie sesión
+                Your child will receive an invitation to join the family when they log in
               </p>
             </div>
             
@@ -978,22 +960,22 @@ export default function Home() {
                 <SelectTrigger>
                   <SelectValue>
                     {taskForm.assignedToIds.length === 0 
-                      ? "Todos los hijos" 
+                      ? "All children" 
                       : taskForm.assignedToIds.includes("specific-mode")
-                        ? "Seleccionar hijos específicos"
-                        : `${taskForm.assignedToIds.length} hijo(s) seleccionado(s)`
+                        ? "Select specific children"
+                        : `${taskForm.assignedToIds.length} child(ren) selected`
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los hijos</SelectItem>
-                  <SelectItem value="specific">Hijos específicos</SelectItem>
+                  <SelectItem value="all">All children</SelectItem>
+                  <SelectItem value="specific">Specific children</SelectItem>
                 </SelectContent>
               </Select>
               
               {taskForm.assignedToIds.length > 0 && taskForm.assignedToIds[0] !== "" ? (
                 <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
-                  <Label className="text-sm font-medium">Seleccionar hijos:</Label>
+                  <Label className="text-sm font-medium">Select children:</Label>
                   {children?.map((child: any) => (
                     <div key={child.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -1193,22 +1175,22 @@ export default function Home() {
                   <SelectTrigger>
                     <SelectValue>
                       {!editingTask.assignedToIds || editingTask.assignedToIds.length === 0
-                        ? "Todos los hijos" 
+                        ? "All children" 
                         : editingTask.assignedToIds.includes("specific-mode")
-                          ? "Seleccionar hijos específicos"
-                          : `${editingTask.assignedToIds.length} hijo(s) seleccionado(s)`
+                          ? "Select specific children"
+                          : `${editingTask.assignedToIds.length} child(ren) selected`
                       }
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos los hijos</SelectItem>
-                    <SelectItem value="specific">Hijos específicos</SelectItem>
+                    <SelectItem value="all">All children</SelectItem>
+                    <SelectItem value="specific">Specific children</SelectItem>
                   </SelectContent>
                 </Select>
                 
                 {editingTask.assignedToIds && editingTask.assignedToIds.length > 0 && editingTask.assignedToIds[0] !== "" ? (
                   <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
-                    <Label className="text-sm font-medium">Seleccionar hijos:</Label>
+                    <Label className="text-sm font-medium">Select children:</Label>
                     {children?.map((child: any) => (
                       <div key={child.id} className="flex items-center space-x-2">
                         <Checkbox

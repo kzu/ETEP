@@ -485,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const notification = await storage.createNotification({
           userId: childUser.id,
           title: "Invitación familiar",
-          message: `${user.firstName || 'Un padre'} te ha invitado a unirte a su familia. Revisa tus invitaciones pendientes.`,
+          message: `${user.firstName || 'A parent'} has invited you to join their family. Check your pending invitations.`,
           type: "family_invitation",
           relatedId: invitation.id
         });
@@ -545,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: invitation.parentId,
         type: 'invitation_accepted',
         title: 'Invitación Aceptada',
-        message: `${user?.firstName || 'Tu hijo/a'} ha aceptado la invitación y se ha unido a la familia`,
+        message: `${user?.firstName || 'Your child'} has accepted the invitation and joined the family`,
         relatedId: id
       });
       

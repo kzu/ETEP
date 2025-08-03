@@ -171,9 +171,9 @@ export default function RoleSelection() {
                   <div className="flex items-center space-x-3">
                     <UserCheck className="h-8 w-8 text-primary" />
                     <div>
-                      <h3 className="font-semibold text-gray-900">Padre/Madre</h3>
+                      <h3 className="font-semibold text-gray-900">Parent</h3>
                       <p className="text-sm text-gray-600">
-                        Crear tareas, gestionar pagos y supervisar a los hijos
+                        Create tasks, manage payments and supervise children
                       </p>
                     </div>
                   </div>
@@ -190,7 +190,7 @@ export default function RoleSelection() {
                   <div className="flex items-center space-x-3">
                     <Baby className="h-8 w-8 text-secondary" />
                     <div>
-                      <h3 className="font-semibold text-gray-900">Hijo/a</h3>
+                      <h3 className="font-semibold text-gray-900">Child</h3>
                       <p className="text-sm text-gray-600">
                         Completar tareas y ganar dinero
                       </p>
@@ -203,16 +203,16 @@ export default function RoleSelection() {
             {/* Parent Email for Children */}
             {selectedRole === 'child' && (
               <div className="space-y-2">
-                <Label htmlFor="parentEmail">Email del Padre/Madre (opcional)</Label>
+                <Label htmlFor="parentEmail">Parent Email (optional)</Label>
                 <Input
                   id="parentEmail"
                   type="email"
-                  placeholder="padre@ejemplo.com"
+                  placeholder="parent@example.com"
                   value={parentEmail}
                   onChange={(e) => setParentEmail(e.target.value)}
                 />
                 <p className="text-xs text-gray-500">
-                  Si conoces el email de tu padre/madre, podrás unirte automáticamente a su familia
+                  If you know your parent's email, you can automatically join their family
                 </p>
               </div>
             )}
@@ -231,7 +231,7 @@ export default function RoleSelection() {
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  Continuar como {selectedRole === 'parent' ? 'Padre/Madre' : 'Hijo/a'}
+                  Continuar como {selectedRole === 'parent' ? 'Parent' : 'Child'}
                 </>
               )}
             </Button>

@@ -23,8 +23,8 @@ export default function Landing() {
             
             <div className="space-y-4">
               <div className="text-sm text-gray-500 mb-6">
-                • Padres crean tareas remuneradas<br/>
-                • Hijos ganan dinero completando tareas<br/>
+                • Parents create paid tasks<br/>
+                • Children earn money completing tasks<br/>
                 • Seguimiento de pagos pendientes y acumulados
               </div>
               
