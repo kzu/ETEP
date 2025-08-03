@@ -307,7 +307,7 @@ export default function Home() {
       await apiRequest('/api/payments', 'POST', { toUserId, amount });
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Payment sent. The child must confirm it." });
+      toast({ title: "Éxito", description: "Pago enviado. El hijo debe confirmarlo." });
       queryClient.invalidateQueries({ queryKey: ["/api/children"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
@@ -1198,22 +1198,22 @@ export default function Home() {
                 <SelectTrigger>
                   <SelectValue>
                     {taskForm.assignedToIds.length === 0 
-                      ? "All children" 
+                      ? "Todos los hijos" 
                       : taskForm.assignedToIds.includes("specific-mode")
-                        ? "Select specific children"
-                        : `${taskForm.assignedToIds.length} child(ren) selected`
+                        ? "Seleccionar hijos específicos"
+                        : `${taskForm.assignedToIds.length} hijo(s) seleccionado(s)`
                     }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All children</SelectItem>
-                  <SelectItem value="specific">Specific children</SelectItem>
+                  <SelectItem value="all">Todos los hijos</SelectItem>
+                  <SelectItem value="specific">Hijos específicos</SelectItem>
                 </SelectContent>
               </Select>
               
               {taskForm.assignedToIds.length > 0 && taskForm.assignedToIds[0] !== "" ? (
                 <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
-                  <Label className="text-sm font-medium">Select children:</Label>
+                  <Label className="text-sm font-medium">Seleccionar hijos:</Label>
                   {children?.map((child: any) => (
                     <div key={child.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -1455,22 +1455,22 @@ export default function Home() {
                   <SelectTrigger>
                     <SelectValue>
                       {!editingTask.assignedToIds || editingTask.assignedToIds.length === 0
-                        ? "All children" 
+                        ? "Todos los hijos" 
                         : editingTask.assignedToIds.includes("specific-mode")
-                          ? "Select specific children"
-                          : `${editingTask.assignedToIds.length} child(ren) selected`
+                          ? "Seleccionar hijos específicos"
+                          : `${editingTask.assignedToIds.length} hijo(s) seleccionado(s)`
                       }
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All children</SelectItem>
-                    <SelectItem value="specific">Specific children</SelectItem>
+                    <SelectItem value="all">Todos los hijos</SelectItem>
+                    <SelectItem value="specific">Hijos específicos</SelectItem>
                   </SelectContent>
                 </Select>
                 
                 {editingTask.assignedToIds && editingTask.assignedToIds.length > 0 && editingTask.assignedToIds[0] !== "" ? (
                   <div className="mt-2 space-y-2 border rounded-md p-3 bg-gray-50">
-                    <Label className="text-sm font-medium">Select children:</Label>
+                    <Label className="text-sm font-medium">Seleccionar hijos:</Label>
                     {children?.map((child: any) => (
                       <div key={child.id} className="flex items-center space-x-2">
                         <Checkbox
