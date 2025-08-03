@@ -90,6 +90,9 @@ export interface IStorage {
   acceptInvitation(invitationId: string, userId: string): Promise<void>;
   rejectInvitation(invitationId: string): Promise<void>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  
+  // Family creation operations
+  createFamilyWithAdmin(userId: string, familyName: string): Promise<Family>;
 }
 
 // Helper function to generate Gravatar URL
@@ -518,6 +521,30 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+
+  async createFamilyWithAdmin(userId: string, familyName: string): Promise<Family> {
+    // Create the family
+    const [family] = await db.insert(families)
+      .values({
+        id: nanoid(),
+        name: familyName,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+
+    // Add user as admin member
+    await db.insert(familyMemberships)
+      .values({
+        id: nanoid(),
+        familyId: family.id,
+        userId: userId,
+        role: 'admin',
+        joinedAt: new Date()
+      });
+
+    return family;
   }
 }
 

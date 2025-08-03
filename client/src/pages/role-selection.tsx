@@ -29,11 +29,12 @@ export default function RoleSelection() {
   // Fetch pending invitations for this user
   const { data: invitations, isLoading: invitationsLoading } = useQuery({
     queryKey: ["/api/family-invitations"],
+    select: (data) => data as any[] || []
   });
 
-  // Role selection mutation
+  // Role selection mutation for children only (parents go to onboarding)
   const selectRoleMutation = useMutation({
-    mutationFn: async (data: { role: 'parent' | 'child'; parentEmail?: string }) => {
+    mutationFn: async (data: { role: 'child'; parentEmail: string }) => {
       return await apiRequest('PATCH', '/api/user/role', data);
     },
     onSuccess: () => {
@@ -79,11 +80,25 @@ export default function RoleSelection() {
   });
 
   const handleRoleSelection = () => {
-    const data: any = { role: selectedRole };
-    if (selectedRole === 'child' && parentEmail.trim()) {
-      data.parentEmail = parentEmail.trim();
+    if (selectedRole === 'parent') {
+      // Redirect to parent onboarding page
+      window.location.href = '/parent-onboarding';
+      return;
     }
-    selectRoleMutation.mutate(data);
+
+    if (selectedRole === 'child' && !parentEmail.trim()) {
+      toast({ 
+        title: "Error", 
+        description: "Por favor ingresa el email de tu padre/madre", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    selectRoleMutation.mutate({ 
+      role: selectedRole, 
+      parentEmail: parentEmail.trim() 
+    });
   };
 
   const handleAcceptInvitation = (invitationId: string) => {

@@ -511,8 +511,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           relatedId: invitation.id
         });
         
-        // Broadcast real-time notification
-        broadcastNotificationToUser(inviteeUser.id, notification);
+        // Broadcast real-time notification with family information
+        broadcastNotificationToUser(inviteeUser.id, {
+          ...notification,
+          type: 'family_invitation',
+          familyName: family.name,
+          familyId: family.id,
+          invitationId: invitation.id
+        });
       }
       
       res.json(invitation);
@@ -622,6 +628,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Family management routes
+  app.post('/api/family/create', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+      
+      if (!name || !name.trim()) {
+        return res.status(400).json({ message: "Family name is required" });
+      }
+
+      // Check if user already belongs to a family
+      const existingFamily = await storage.getFamilyByUserId(userId);
+      if (existingFamily) {
+        return res.status(400).json({ message: "User already belongs to a family" });
+      }
+
+      // Update user role to parent first
+      await storage.updateUserRole(userId, { role: 'parent' });
+      
+      // Create family and add user as admin
+      const family = await storage.createFamilyWithAdmin(userId, name.trim());
+      
+      res.json({ success: true, family });
+    } catch (error) {
+      console.error("Error creating family:", error);
+      res.status(500).json({ message: "Failed to create family" });
+    }
+  });
+
   app.get('/api/family', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

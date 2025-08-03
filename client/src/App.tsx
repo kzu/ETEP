@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import RoleSelection from "@/pages/role-selection";
+import ParentOnboarding from "@/pages/parent-onboarding";
 import FamilyManagement from "@/pages/family-management";
 
 function Router() {
@@ -17,8 +18,11 @@ function Router() {
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
-      ) : !user?.role ? (
-        <Route path="/" component={RoleSelection} />
+      ) : !user || !(user as any)?.role ? (
+        <>
+          <Route path="/" component={RoleSelection} />
+          <Route path="/parent-onboarding" component={ParentOnboarding} />
+        </>
       ) : (
         <>
           <Route path="/" component={Home} />
