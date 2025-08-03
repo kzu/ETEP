@@ -168,6 +168,7 @@ export default function Home() {
     title: '',
     description: '',
     type: 'oneTime',
+    paymentType: 'perTask',
     paymentAmount: '',
     assignedToIds: [] as string[]
   });
@@ -191,7 +192,7 @@ export default function Home() {
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea creada exitosamente" });
-      setTaskForm({ title: '', description: '', type: 'oneTime', paymentAmount: '', assignedToIds: [] });
+      setTaskForm({ title: '', description: '', type: 'oneTime', paymentType: 'perTask', paymentAmount: '', assignedToIds: [] });
       setShowCreateTaskModal(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
@@ -825,7 +826,7 @@ export default function Home() {
                           </Badge>
                         </div>
                         
-                        {task.type === 'recurring' && (
+                        {(task.paymentType === 'perUnit' || (task.type === 'recurring' && !task.paymentType)) && (
                           <div className="bg-gray-50 rounded-lg p-3 mb-3">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-gray-700">Unidades realizadas:</span>
@@ -870,8 +871,8 @@ export default function Home() {
                           className="w-full"
                           onClick={() => submitTaskMutation.mutate({
                             taskId: task.id,
-                            units: task.type === 'recurring' ? getSessionUnits(task.id) : 1,
-                            totalAmount: task.type === 'recurring' 
+                            units: (task.paymentType === 'perUnit' || (task.type === 'recurring' && !task.paymentType)) ? getSessionUnits(task.id) : 1,
+                            totalAmount: (task.paymentType === 'perUnit' || (task.type === 'recurring' && !task.paymentType))
                               ? task.paymentAmount * getSessionUnits(task.id)
                               : task.paymentAmount
                           })}
@@ -1018,7 +1019,27 @@ export default function Home() {
             </div>
             
             <div>
-              <Label htmlFor="modal-payment">Pago por Tarea</Label>
+              <Label>Tipo de Pago</Label>
+              <RadioGroup 
+                value={taskForm.paymentType} 
+                onValueChange={(value) => setTaskForm(prev => ({ ...prev, paymentType: value }))}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="perTask" id="modal-perTask" />
+                  <Label htmlFor="modal-perTask">Pago por Tarea</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="perUnit" id="modal-perUnit" />
+                  <Label htmlFor="modal-perUnit">Pago por Unidad</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div>
+              <Label htmlFor="modal-payment">
+                {taskForm.paymentType === 'perTask' ? 'Monto Total' : 'Monto por Unidad'}
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-gray-500">$</span>
                 <Input
@@ -1032,9 +1053,9 @@ export default function Home() {
                   placeholder="5000"
                 />
               </div>
-              {taskForm.type === 'recurring' && (
+              {taskForm.paymentType === 'perUnit' && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Para tareas recurrentes, esto es el pago por unidad
+                  Los niños podrán seleccionar cuántas unidades completaron
                 </p>
               )}
             </div>
@@ -1127,7 +1148,27 @@ export default function Home() {
               </div>
               
               <div>
-                <Label htmlFor="edit-payment">Pago</Label>
+                <Label>Tipo de Pago</Label>
+                <RadioGroup
+                  value={editingTask.paymentType || 'perTask'}
+                  onValueChange={(value) => setEditingTask(prev => ({ ...prev, paymentType: value }))}
+                  className="flex space-x-4 mt-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="perTask" id="edit-perTask" />
+                    <Label htmlFor="edit-perTask">Pago por Tarea</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="perUnit" id="edit-perUnit" />
+                    <Label htmlFor="edit-perUnit">Pago por Unidad</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-payment">
+                  {(editingTask.paymentType || 'perTask') === 'perTask' ? 'Monto Total' : 'Monto por Unidad'}
+                </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                   <Input
@@ -1144,9 +1185,9 @@ export default function Home() {
                     placeholder="5000"
                   />
                 </div>
-                {editingTask.type === 'recurring' && (
+                {(editingTask.paymentType || 'perTask') === 'perUnit' && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Para tareas recurrentes, esto es el pago por unidad
+                    Los niños podrán seleccionar cuántas unidades completaron
                   </p>
                 )}
               </div>
