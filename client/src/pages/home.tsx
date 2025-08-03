@@ -163,6 +163,10 @@ export default function Home() {
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
           queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/history"] }); // Refresh child history
           queryClient.invalidateQueries({ queryKey: ["/api/children"] }); // Refresh children balance data
+        } else if (data.type === 'task_submitted') {
+          console.log("Task submitted, refreshing history");
+          // Refresh history for the child who submitted the task
+          queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/history"] });
         } else if (data.type === 'payment_updated') {
           console.log("Payment updated, refreshing children balance data");
           // Refresh children balance data when payment is made
@@ -245,6 +249,7 @@ export default function Home() {
       toast({ title: "Éxito", description: "Tarea enviada para revisión" });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/history"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -934,36 +939,45 @@ export default function Home() {
                       ) : !childSubmissionHistory || childSubmissionHistory.length === 0 ? (
                         <p className="text-gray-500 text-center py-8">No hay historial de tareas</p>
                       ) : (
-                        childSubmissionHistory.map((submission: any) => (
-                          <div 
-                            key={submission.id} 
-                            className={`border rounded-lg p-4 ${
-                              submission.status === 'approved' 
-                                ? 'border-green-200 bg-green-50' 
-                                : 'border-red-200 bg-red-50'
-                            }`}
-                          >
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h4 className="font-medium text-gray-900">{submission.taskTitle || 'Tarea completada'}</h4>
-                                <p className="text-sm text-gray-600">
-                                  {submission.units > 1 && `${submission.units} unidades • `}
-                                  {new Date(submission.reviewedAt || submission.submittedAt).toLocaleDateString('es-ES')}
-                                </p>
-                                <p className={`text-sm font-medium ${
-                                  submission.status === 'approved' ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {submission.status === 'approved' ? '✓ Aprobada' : '✗ Rechazada'}
-                                </p>
+                        childSubmissionHistory.map((submission: any) => {
+                          const getStatusStyle = (status: string) => {
+                            switch (status) {
+                              case 'approved':
+                                return { border: 'border-green-200 bg-green-50', text: 'text-green-600', icon: '✓', label: 'Aprobada' };
+                              case 'rejected':
+                                return { border: 'border-red-200 bg-red-50', text: 'text-red-600', icon: '✗', label: 'Rechazada' };
+                              case 'pending':
+                                return { border: 'border-yellow-200 bg-yellow-50', text: 'text-yellow-600', icon: '⏳', label: 'Pendiente' };
+                              default:
+                                return { border: 'border-gray-200 bg-gray-50', text: 'text-gray-600', icon: '?', label: 'Desconocido' };
+                            }
+                          };
+                          
+                          const statusStyle = getStatusStyle(submission.status);
+                          
+                          return (
+                            <div 
+                              key={submission.id} 
+                              className={`border rounded-lg p-4 ${statusStyle.border}`}
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{submission.taskTitle || 'Tarea completada'}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {submission.units > 1 && `${submission.units} unidades • `}
+                                    {new Date(submission.reviewedAt || submission.submittedAt).toLocaleDateString('es-ES')}
+                                  </p>
+                                  <p className={`text-sm font-medium ${statusStyle.text}`}>
+                                    {statusStyle.icon} {statusStyle.label}
+                                  </p>
+                                </div>
+                                <span className={`text-lg font-bold ${statusStyle.text}`}>
+                                  {formatCurrency(submission.totalAmount)}
+                                </span>
                               </div>
-                              <span className={`text-lg font-bold ${
-                                submission.status === 'approved' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {formatCurrency(submission.totalAmount)}
-                              </span>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </Card>

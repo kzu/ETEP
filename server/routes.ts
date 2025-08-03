@@ -420,6 +420,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         broadcastNotificationToUser(parentOrCollaborator.id, notification);
       }
       
+      // Also broadcast to the child that submitted the task for real-time history update
+      broadcastToUser(userId, {
+        type: 'task_submitted',
+        submissionId: submission.id
+      });
+      
       res.json(submission);
     } catch (error) {
       console.error("Error creating task submission:", error);
@@ -534,14 +540,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only children can access submission history" });
       }
       
-      // Get both approved and rejected submissions for the child
-      const [approvedSubmissions, rejectedSubmissions] = await Promise.all([
+      // Get pending, approved and rejected submissions for the child
+      const [pendingSubmissions, approvedSubmissions, rejectedSubmissions] = await Promise.all([
+        storage.getTaskSubmissionsByStatusAndUser(familyId, 'pending', userId),
         storage.getTaskSubmissionsByStatusAndUser(familyId, 'approved', userId),
         storage.getTaskSubmissionsByStatusAndUser(familyId, 'rejected', userId)
       ]);
       
-      // Combine and sort by review date
-      const allSubmissions = [...approvedSubmissions, ...rejectedSubmissions]
+      // Combine and sort by review date (or submitted date for pending)
+      const allSubmissions = [...pendingSubmissions, ...approvedSubmissions, ...rejectedSubmissions]
         .sort((a, b) => new Date(b.reviewedAt || b.submittedAt).getTime() - new Date(a.reviewedAt || a.submittedAt).getTime());
       
       res.json(allSubmissions);
