@@ -46,6 +46,7 @@ export const parentRoleEnum = pgEnum("parent_role", ["admin", "collaborator"]);
 
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull().references(() => families.id),
   title: text("title").notNull(),
   description: text("description"),
   type: taskTypeEnum("type").notNull(),
@@ -71,7 +72,8 @@ export const taskSubmissions = pgTable("task_submissions", {
 
 export const balances = pgTable("balances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  familyId: varchar("family_id").notNull().references(() => families.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
   accumulated: integer("accumulated").notNull().default(0), // in cents
   pending: integer("pending").notNull().default(0), // in cents
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -79,6 +81,7 @@ export const balances = pgTable("balances", {
 
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull().references(() => families.id),
   fromUserId: varchar("from_user_id").notNull().references(() => users.id),
   toUserId: varchar("to_user_id").notNull().references(() => users.id),
   amount: integer("amount").notNull(), // in cents
@@ -89,6 +92,7 @@ export const payments = pgTable("payments", {
 
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull().references(() => families.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   message: text("message").notNull(),

@@ -9,6 +9,12 @@ import { z } from "zod";
 // Store WebSocket connections by user ID
 const userConnections = new Map<string, WebSocket[]>();
 
+// Helper function to get user's family ID
+async function getUserFamilyId(userId: string): Promise<string | null> {
+  const family = await storage.getFamilyByUserId(userId);
+  return family?.id || null;
+}
+
 // Helper function to broadcast notification to user
 function broadcastNotificationToUser(userId: string, notification: any) {
   const connections = userConnections.get(userId);
@@ -38,10 +44,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Ensure user has a balance record
-      let balance = await storage.getBalance(userId);
-      if (!balance) {
-        balance = await storage.createBalance(userId);
+      // Get user's family ID
+      const familyId = await getUserFamilyId(userId);
+      
+      // If user belongs to a family, ensure they have a balance record
+      let balance = null;
+      if (familyId) {
+        balance = await storage.getBalance(userId, familyId);
+        if (!balance) {
+          balance = await storage.createBalance(userId, familyId);
+        }
       }
       
       res.json({ ...user, balance });
@@ -57,18 +69,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can view children" });
+      if (!user || (user.role !== 'parent' && user.role !== 'child')) {
+        return res.status(403).json({ message: "Access denied" });
       }
       
-      const children = await storage.getChildren(userId);
+      // Get user's family ID
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      // Get all family members who are children
+      const allMembers = await storage.getFamilyMembers(familyId);
+      const children = allMembers.filter(member => member.role === 'child').map(member => member.user);
       
       // Get balances for each child
       const childrenWithBalances = await Promise.all(
         children.map(async (child) => {
-          let balance = await storage.getBalance(child.id);
+          let balance = await storage.getBalance(child.id, familyId);
           if (!balance) {
-            balance = await storage.createBalance(child.id);
+            balance = await storage.createBalance(child.id, familyId);
           }
           return { ...child, balance };
         })
@@ -91,7 +111,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can view tasks" });
       }
       
-      const tasks = await storage.getTasksByCreator(userId);
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const tasks = await storage.getTasksByCreator(userId, familyId);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -106,8 +131,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { taskId } = req.params;
       const { title, description, type, paymentAmount, assignedToIds } = req.body;
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       // Get the existing task to verify ownership
-      const existingTask = await storage.getTaskById(taskId);
+      const existingTask = await storage.getTaskById(taskId, familyId);
       if (!existingTask || existingTask.createdById !== userId) {
         return res.status(404).json({ message: 'Task not found or not authorized' });
       }
@@ -118,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type,
         paymentAmount,
         assignedToIds: assignedToIds || []
-      });
+      }, familyId);
       
       res.json(updatedTask);
     } catch (error) {
@@ -133,13 +163,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { taskId } = req.params;
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       // Get the existing task to verify ownership
-      const existingTask = await storage.getTaskById(taskId);
+      const existingTask = await storage.getTaskById(taskId, familyId);
       if (!existingTask || existingTask.createdById !== userId) {
         return res.status(404).json({ message: 'Task not found or not authorized' });
       }
       
-      await storage.deleteTask(taskId);
+      await storage.deleteTask(taskId, familyId);
       res.json({ message: 'Task deleted successfully' });
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -156,8 +191,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can create tasks" });
       }
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       const validatedData = insertTaskSchema.parse({
         ...req.body,
+        familyId,
         createdById: userId,
         paymentAmount: Math.round(req.body.paymentAmount * 100) // convert to cents
       });
@@ -173,7 +214,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/tasks/assigned', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const tasks = await storage.getTasksForChild(userId);
+      
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const tasks = await storage.getTasksForChild(userId, familyId);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching assigned tasks:", error);
@@ -184,7 +231,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/tasks/created', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const tasks = await storage.getTasksByCreator(userId);
+      
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const tasks = await storage.getTasksByCreator(userId, familyId);
       res.json(tasks);
     } catch (error) {
       console.error("Error fetching created tasks:", error);
@@ -202,6 +255,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only children can submit tasks" });
       }
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       const validatedData = insertTaskSubmissionSchema.parse({
         taskId: req.body.taskId,
         submittedById: userId,
@@ -211,10 +269,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const submission = await storage.createTaskSubmission(validatedData);
       
-      // Create notification for parent
-      if (user.parentId) {
+      // Create notification for all parents in the family
+      const familyMembers = await storage.getFamilyMembers(familyId);
+      const parents = familyMembers.filter(member => member.role === 'parent').map(member => member.user);
+      
+      for (const parent of parents) {
         const notification = await storage.createNotification({
-          userId: user.parentId,
+          familyId,
+          userId: parent.id,
           title: "Nueva tarea enviada",
           message: `${user.firstName || user.email} ha enviado una tarea para revisión`,
           type: "task_submitted",
@@ -222,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Broadcast real-time notification to parent
-        broadcastNotificationToUser(user.parentId, notification);
+        broadcastNotificationToUser(parent.id, notification);
       }
       
       res.json(submission);
@@ -241,7 +303,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can view pending submissions" });
       }
       
-      const submissions = await storage.getPendingTaskSubmissions(userId);
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const submissions = await storage.getPendingTaskSubmissions(familyId);
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching pending submissions:", error);
@@ -258,7 +325,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can view approved submissions" });
       }
       
-      const submissions = await storage.getTaskSubmissionsByStatus(userId, 'approved');
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const submissions = await storage.getTaskSubmissionsByStatus(familyId, 'approved');
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching approved submissions:", error);
@@ -275,7 +347,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can view rejected submissions" });
       }
       
-      const submissions = await storage.getTaskSubmissionsByStatus(userId, 'rejected');
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      const submissions = await storage.getTaskSubmissionsByStatus(familyId, 'rejected');
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching rejected submissions:", error);
@@ -293,19 +370,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can review tasks" });
       }
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       if (!['approve', 'reject'].includes(action)) {
         return res.status(400).json({ message: "Invalid action" });
       }
       
       const status = action === 'approve' ? 'approved' : 'rejected';
-      await storage.updateTaskSubmissionStatus(id, status, userId);
+      await storage.updateTaskSubmissionStatus(id, status, userId, familyId);
       
       // If approved, update child's balance
       if (action === 'approve') {
-        const submission = await storage.getTaskSubmissionById(id);
+        const submission = await storage.getTaskSubmissionById(id, familyId);
         
         if (submission) {
-          const childBalance = await storage.getBalance(submission.submittedById);
+          const childBalance = await storage.getBalance(submission.submittedById, familyId);
           console.log("Current child balance:", childBalance);
           console.log("Task submission amount:", submission.totalAmount);
           if (childBalance) {
@@ -313,16 +395,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("Updating child balance - new pending:", newPending);
             await storage.updateBalance(
               submission.submittedById,
+              familyId,
               childBalance.accumulated,
               newPending
             );
             // Verify the update
-            const updatedBalance = await storage.getBalance(submission.submittedById);
+            const updatedBalance = await storage.getBalance(submission.submittedById, familyId);
             console.log("Updated child balance:", updatedBalance);
           }
           
           // Create notification for child
           const notification = await storage.createNotification({
+            familyId,
             userId: submission.submittedById,
             title: "Tarea aprobada",
             message: `Tu tarea ha sido aprobada. +$${submission.totalAmount}`,
@@ -352,8 +436,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only parents can send payments" });
       }
       
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
       const validatedData = insertPaymentSchema.parse({
         ...req.body,
+        familyId,
         fromUserId: userId,
         amount: req.body.amount // amount is already in cents from frontend
       });
@@ -361,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment(validatedData);
       
       // Automatically move pending amount to accumulated without child confirmation
-      const childBalance = await storage.getBalance(validatedData.toUserId);
+      const childBalance = await storage.getBalance(validatedData.toUserId, familyId);
       if (childBalance) {
         console.log("Current child balance before payment:", childBalance);
         console.log("Payment amount:", validatedData.amount);
@@ -373,20 +463,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await storage.updateBalance(
           validatedData.toUserId,
+          familyId,
           newAccumulated,
           newPending
         );
         
         // Verify the update
-        const updatedBalance = await storage.getBalance(validatedData.toUserId);
+        const updatedBalance = await storage.getBalance(validatedData.toUserId, familyId);
         console.log("Updated child balance after payment:", updatedBalance);
       }
       
       // Automatically mark payment as confirmed
-      await storage.updatePaymentStatus(payment.id, 'confirmed');
+      await storage.updatePaymentStatus(payment.id, 'confirmed', familyId);
       
       // Create notification for child
       const notification = await storage.createNotification({
+        familyId,
         userId: validatedData.toUserId,
         title: "Pago recibido",
         message: `¡Recibiste $${validatedData.amount} de papá! Se agregó a tu dinero acumulado.`,
@@ -410,7 +502,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const notifications = await storage.getNotificationsByUser(userId);
+      
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.json([]); // Return empty array if not part of any family
+      }
+      
+      const notifications = await storage.getNotificationsByUser(userId, familyId);
       res.json(notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -420,8 +518,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { id } = req.params;
-      await storage.markNotificationAsRead(id);
+      
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      await storage.markNotificationAsRead(id, familyId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -432,7 +537,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      await storage.markAllNotificationsAsRead(userId);
+      
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      await storage.markAllNotificationsAsRead(userId, familyId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
@@ -448,15 +559,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedUser = await storage.updateUserRole(userId, validatedData);
       
-      // Create balance if user becomes a child
+      // Create balance if user becomes a child and has a family
       if (validatedData.role === 'child') {
-        let balance = await storage.getBalance(userId);
-        if (!balance) {
-          balance = await storage.createBalance(userId);
+        const familyId = await getUserFamilyId(userId);
+        if (familyId) {
+          let balance = await storage.getBalance(userId, familyId);
+          if (!balance) {
+            balance = await storage.createBalance(userId, familyId);
+          }
         }
       }
       
-      res.json({ ...updatedUser, balance: validatedData.role === 'child' ? await storage.getBalance(userId) : null });
+      const familyId = await getUserFamilyId(userId);
+      const balance = validatedData.role === 'child' && familyId ? await storage.getBalance(userId, familyId) : null;
+      res.json({ ...updatedUser, balance });
     } catch (error) {
       console.error("Error updating user role:", error);
       res.status(500).json({ message: "Failed to update user role" });

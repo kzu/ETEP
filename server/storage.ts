@@ -47,37 +47,38 @@ export interface IStorage {
   
   // Task operations
   createTask(task: InsertTask): Promise<Task>;
-  getTasksForChild(childId: string): Promise<Task[]>;
-  getTasksByCreator(creatorId: string): Promise<Task[]>;
-  getTaskById(taskId: string): Promise<Task | undefined>;
-  updateTask(taskId: string, updates: Partial<InsertTask>): Promise<Task>;
-  deleteTask(taskId: string): Promise<void>;
-  updateTaskStatus(taskId: string, status: string): Promise<void>;
+  getTasksForFamily(familyId: string): Promise<Task[]>;
+  getTasksForChild(childId: string, familyId: string): Promise<Task[]>;
+  getTasksByCreator(creatorId: string, familyId: string): Promise<Task[]>;
+  getTaskById(taskId: string, familyId: string): Promise<Task | undefined>;
+  updateTask(taskId: string, updates: Partial<InsertTask>, familyId: string): Promise<Task>;
+  deleteTask(taskId: string, familyId: string): Promise<void>;
+  updateTaskStatus(taskId: string, status: string, familyId: string): Promise<void>;
   
   // Task submission operations
   createTaskSubmission(submission: InsertTaskSubmission): Promise<TaskSubmission>;
-  getTaskSubmissionsByUser(userId: string): Promise<TaskSubmission[]>;
-  getTaskSubmissionsByTask(taskId: string): Promise<TaskSubmission[]>;
-  getTaskSubmissionById(submissionId: string): Promise<TaskSubmission | undefined>;
-  getPendingTaskSubmissions(parentId: string): Promise<TaskSubmission[]>;
-  getTaskSubmissionsByStatus(parentId: string, status: string): Promise<TaskSubmission[]>;
-  updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void>;
+  getTaskSubmissionsByUser(userId: string, familyId: string): Promise<TaskSubmission[]>;
+  getTaskSubmissionsByTask(taskId: string, familyId: string): Promise<TaskSubmission[]>;
+  getTaskSubmissionById(submissionId: string, familyId: string): Promise<TaskSubmission | undefined>;
+  getPendingTaskSubmissions(familyId: string): Promise<TaskSubmission[]>;
+  getTaskSubmissionsByStatus(familyId: string, status: string): Promise<TaskSubmission[]>;
+  updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string, familyId: string): Promise<void>;
   
   // Balance operations
-  getBalance(userId: string): Promise<Balance | undefined>;
-  createBalance(userId: string): Promise<Balance>;
-  updateBalance(userId: string, accumulated: number, pending: number): Promise<void>;
+  getBalance(userId: string, familyId: string): Promise<Balance | undefined>;
+  createBalance(userId: string, familyId: string): Promise<Balance>;
+  updateBalance(userId: string, familyId: string, accumulated: number, pending: number): Promise<void>;
   
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
-  getPaymentsByUser(userId: string): Promise<Payment[]>;
-  updatePaymentStatus(paymentId: string, status: string): Promise<void>;
+  getPaymentsByUser(userId: string, familyId: string): Promise<Payment[]>;
+  updatePaymentStatus(paymentId: string, status: string, familyId: string): Promise<void>;
   
   // Notification operations
-  createNotification(data: { userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification>;
-  getNotificationsByUser(userId: string): Promise<Notification[]>;
-  markNotificationAsRead(notificationId: string): Promise<void>;
-  markAllNotificationsAsRead(userId: string): Promise<void>;
+  createNotification(data: { familyId: string; userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification>;
+  getNotificationsByUser(userId: string, familyId: string): Promise<Notification[]>;
+  markNotificationAsRead(notificationId: string, familyId: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string, familyId: string): Promise<void>;
   
   // Role and family operations
   updateUserRole(userId: string, roleData: UpdateUserRole): Promise<User>;
@@ -232,8 +233,15 @@ export class DatabaseStorage implements IStorage {
     return newTask;
   }
 
-  async getTasksForChild(childId: string): Promise<Task[]> {
-    const allTasks = await db.select().from(tasks);
+  async getTasksForFamily(familyId: string): Promise<Task[]> {
+    return await db.select().from(tasks)
+      .where(eq(tasks.familyId, familyId))
+      .orderBy(desc(tasks.createdAt));
+  }
+
+  async getTasksForChild(childId: string, familyId: string): Promise<Task[]> {
+    const allTasks = await db.select().from(tasks)
+      .where(eq(tasks.familyId, familyId));
     
     // Return tasks where:
     // 1. assignedToIds is empty (available to all children), OR
@@ -245,31 +253,48 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async getTasksByCreator(creatorId: string): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.createdById, creatorId));
+  async getTasksByCreator(creatorId: string, familyId: string): Promise<Task[]> {
+    return await db.select().from(tasks)
+      .where(and(
+        eq(tasks.createdById, creatorId),
+        eq(tasks.familyId, familyId)
+      ));
   }
 
-  async getTaskById(taskId: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+  async getTaskById(taskId: string, familyId: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks)
+      .where(and(
+        eq(tasks.id, taskId),
+        eq(tasks.familyId, familyId)
+      ));
     return task;
   }
 
-  async updateTask(taskId: string, updates: Partial<InsertTask>): Promise<Task> {
+  async updateTask(taskId: string, updates: Partial<InsertTask>, familyId: string): Promise<Task> {
     const [updatedTask] = await db.update(tasks)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(tasks.id, taskId))
+      .where(and(
+        eq(tasks.id, taskId),
+        eq(tasks.familyId, familyId)
+      ))
       .returning();
     return updatedTask;
   }
 
-  async deleteTask(taskId: string): Promise<void> {
-    await db.delete(tasks).where(eq(tasks.id, taskId));
+  async deleteTask(taskId: string, familyId: string): Promise<void> {
+    await db.delete(tasks).where(and(
+      eq(tasks.id, taskId),
+      eq(tasks.familyId, familyId)
+    ));
   }
 
-  async updateTaskStatus(taskId: string, status: string): Promise<void> {
+  async updateTaskStatus(taskId: string, status: string, familyId: string): Promise<void> {
     await db.update(tasks)
       .set({ status: status as any, updatedAt: new Date() })
-      .where(eq(tasks.id, taskId));
+      .where(and(
+        eq(tasks.id, taskId),
+        eq(tasks.familyId, familyId)
+      ));
   }
 
   // Task submission operations
@@ -278,64 +303,74 @@ export class DatabaseStorage implements IStorage {
     return newSubmission;
   }
 
-  async getTaskSubmissionsByUser(userId: string): Promise<TaskSubmission[]> {
-    return await db.select().from(taskSubmissions)
-      .where(eq(taskSubmissions.submittedById, userId))
-      .orderBy(desc(taskSubmissions.submittedAt));
+  async getTaskSubmissionsByUser(userId: string, familyId: string): Promise<TaskSubmission[]> {
+    return await db.query.taskSubmissions.findMany({
+      where: eq(taskSubmissions.submittedById, userId),
+      with: {
+        task: {
+          where: eq(tasks.familyId, familyId)
+        }
+      },
+      orderBy: desc(taskSubmissions.submittedAt)
+    });
   }
 
-  async getTaskSubmissionsByTask(taskId: string): Promise<TaskSubmission[]> {
-    return await db.select().from(taskSubmissions).where(eq(taskSubmissions.taskId, taskId));
+  async getTaskSubmissionsByTask(taskId: string, familyId: string): Promise<TaskSubmission[]> {
+    return await db.query.taskSubmissions.findMany({
+      where: eq(taskSubmissions.taskId, taskId),
+      with: {
+        task: {
+          where: eq(tasks.familyId, familyId)
+        }
+      }
+    });
   }
 
-  async getTaskSubmissionById(submissionId: string): Promise<TaskSubmission | undefined> {
-    const [submission] = await db.select().from(taskSubmissions).where(eq(taskSubmissions.id, submissionId));
+  async getTaskSubmissionById(submissionId: string, familyId: string): Promise<TaskSubmission | undefined> {
+    const submission = await db.query.taskSubmissions.findFirst({
+      where: eq(taskSubmissions.id, submissionId),
+      with: {
+        task: {
+          where: eq(tasks.familyId, familyId)
+        }
+      }
+    });
     return submission;
   }
 
-  async getPendingTaskSubmissions(parentId: string): Promise<TaskSubmission[]> {
-    // Get all children of the parent
-    const children = await this.getChildren(parentId);
-    const childIds = children.map(child => child.id);
-    
-    if (childIds.length === 0) return [];
-
+  async getPendingTaskSubmissions(familyId: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: and(
-        inArray(taskSubmissions.submittedById, childIds),
-        eq(taskSubmissions.status, "submitted")
-      ),
+      where: eq(taskSubmissions.status, "submitted"),
       with: {
         submittedBy: true,
-        task: true,
+        task: {
+          where: eq(tasks.familyId, familyId)
+        },
         reviewedBy: true
       },
       orderBy: desc(taskSubmissions.submittedAt)
     });
   }
 
-  async getTaskSubmissionsByStatus(parentId: string, status: string): Promise<TaskSubmission[]> {
-    // Get all children of the parent
-    const children = await this.getChildren(parentId);
-    const childIds = children.map(child => child.id);
-    
-    if (childIds.length === 0) return [];
-
+  async getTaskSubmissionsByStatus(familyId: string, status: string): Promise<TaskSubmission[]> {
     return await db.query.taskSubmissions.findMany({
-      where: and(
-        inArray(taskSubmissions.submittedById, childIds),
-        eq(taskSubmissions.status, status as any)
-      ),
+      where: eq(taskSubmissions.status, status as any),
       with: {
         submittedBy: true,
-        task: true,
+        task: {
+          where: eq(tasks.familyId, familyId)
+        },
         reviewedBy: true
       },
       orderBy: desc(taskSubmissions.reviewedAt)
     });
   }
 
-  async updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string): Promise<void> {
+  async updateTaskSubmissionStatus(submissionId: string, status: string, reviewerId: string, familyId: string): Promise<void> {
+    // First, verify the submission belongs to this family
+    const submission = await this.getTaskSubmissionById(submissionId, familyId);
+    if (!submission) throw new Error("Task submission not found or not accessible");
+    
     await db.update(taskSubmissions)
       .set({ 
         status: status as any, 
@@ -346,22 +381,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Balance operations
-  async getBalance(userId: string): Promise<Balance | undefined> {
-    const [balance] = await db.select().from(balances).where(eq(balances.userId, userId));
+  async getBalance(userId: string, familyId: string): Promise<Balance | undefined> {
+    const [balance] = await db.select().from(balances)
+      .where(and(
+        eq(balances.userId, userId),
+        eq(balances.familyId, familyId)
+      ));
     return balance;
   }
 
-  async createBalance(userId: string): Promise<Balance> {
+  async createBalance(userId: string, familyId: string): Promise<Balance> {
     const [balance] = await db.insert(balances)
-      .values({ userId, accumulated: 0, pending: 0 })
+      .values({ userId, familyId, accumulated: 0, pending: 0 })
       .returning();
     return balance;
   }
 
-  async updateBalance(userId: string, accumulated: number, pending: number): Promise<void> {
+  async updateBalance(userId: string, familyId: string, accumulated: number, pending: number): Promise<void> {
     await db.update(balances)
       .set({ accumulated, pending, updatedAt: new Date() })
-      .where(eq(balances.userId, userId));
+      .where(and(
+        eq(balances.userId, userId),
+        eq(balances.familyId, familyId)
+      ));
   }
 
   // Payment operations
@@ -370,42 +412,57 @@ export class DatabaseStorage implements IStorage {
     return newPayment;
   }
 
-  async getPaymentsByUser(userId: string): Promise<Payment[]> {
+  async getPaymentsByUser(userId: string, familyId: string): Promise<Payment[]> {
     return await db.select().from(payments)
-      .where(eq(payments.toUserId, userId))
+      .where(and(
+        eq(payments.toUserId, userId),
+        eq(payments.familyId, familyId)
+      ))
       .orderBy(desc(payments.createdAt));
   }
 
-  async updatePaymentStatus(paymentId: string, status: string): Promise<void> {
+  async updatePaymentStatus(paymentId: string, status: string, familyId: string): Promise<void> {
     await db.update(payments)
       .set({ status, confirmedAt: status === 'confirmed' ? new Date() : null })
-      .where(eq(payments.id, paymentId));
+      .where(and(
+        eq(payments.id, paymentId),
+        eq(payments.familyId, familyId)
+      ));
   }
 
   // Notification operations
-  async createNotification(data: { userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification> {
+  async createNotification(data: { familyId: string; userId: string; title: string; message: string; type: string; relatedId?: string }): Promise<Notification> {
     const [notification] = await db.insert(notifications)
       .values(data)
       .returning();
     return notification;
   }
 
-  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+  async getNotificationsByUser(userId: string, familyId: string): Promise<Notification[]> {
     return await db.select().from(notifications)
-      .where(eq(notifications.userId, userId))
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.familyId, familyId)
+      ))
       .orderBy(desc(notifications.createdAt));
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<void> {
+  async markNotificationAsRead(notificationId: string, familyId: string): Promise<void> {
     // Delete the notification instead of just marking as read
     await db.delete(notifications)
-      .where(eq(notifications.id, notificationId));
+      .where(and(
+        eq(notifications.id, notificationId),
+        eq(notifications.familyId, familyId)
+      ));
   }
 
-  async markAllNotificationsAsRead(userId: string): Promise<void> {
-    // Delete all notifications for the user
+  async markAllNotificationsAsRead(userId: string, familyId: string): Promise<void> {
+    // Delete all notifications for the user in this family
     await db.delete(notifications)
-      .where(eq(notifications.userId, userId));
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.familyId, familyId)
+      ));
   }
 
   // Role and family operations
