@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Coins, 
   CreditCard, 
@@ -92,6 +93,10 @@ export default function Home() {
 
   // Task submission states
   const [sessionTimes, setSessionTimes] = useState<Record<string, number>>({});
+  
+  // Invite child states
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   // Mutations
   const createTaskMutation = useMutation({
@@ -209,6 +214,29 @@ export default function Home() {
         return;
       }
       toast({ title: "Error", description: "No se pudo confirmar el pago", variant: "destructive" });
+    },
+  });
+
+  const inviteChildMutation = useMutation({
+    mutationFn: async (childEmail: string) => {
+      await apiRequest('POST', '/api/family-invitations', { childEmail });
+    },
+    onSuccess: () => {
+      toast({ title: "Éxito", description: "Invitación enviada correctamente" });
+      setShowInviteModal(false);
+      setInviteEmail('');
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Iniciando sesión nuevamente...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({ title: "Error", description: "No se pudo enviar la invitación", variant: "destructive" });
     },
   });
 
@@ -363,7 +391,10 @@ export default function Home() {
                   ))}
                   
                   {/* Add Child Card */}
-                  <Card className="p-6 border-dashed border-2 hover:border-gray-400 cursor-pointer">
+                  <Card 
+                    className="p-6 border-dashed border-2 hover:border-gray-400 cursor-pointer transition-colors"
+                    onClick={() => setShowInviteModal(true)}
+                  >
                     <div className="flex flex-col items-center justify-center text-center h-full">
                       <UserPlus className="h-12 w-12 text-gray-400 mb-3" />
                       <h3 className="font-medium text-gray-900 mb-1">Agregar Hijo</h3>
@@ -723,6 +754,62 @@ export default function Home() {
           </button>
         </div>
       </nav>
+
+      {/* Invite Child Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <UserPlus className="h-5 w-5" />
+              <span>Invitar Hijo</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="inviteEmail">Email del hijo</Label>
+              <Input
+                id="inviteEmail"
+                type="email"
+                placeholder="hijo@ejemplo.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Tu hijo recibirá una invitación para unirse a la familia cuando inicie sesión
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => inviteChildMutation.mutate(inviteEmail)}
+                disabled={!inviteEmail.trim() || inviteChildMutation.isPending}
+              >
+                {inviteChildMutation.isPending ? (
+                  <>
+                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Enviar Invitación
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
