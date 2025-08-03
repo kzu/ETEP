@@ -27,10 +27,13 @@
 - Enhanced task cards with status-specific styling (green for approved, red for rejected)
 - Added edit functionality for available tasks with hover-based edit buttons
 - Improved task submission display to show unit quantities and better formatting
+- Added "Marcar todas como leídas" button to notification panel
+- **CRITICAL**: Removed all currency conversion logic - amounts are stored and displayed as whole numbers (ARS) without cents conversion
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
+Currency: All amounts are in ARS (Argentine Pesos) as whole numbers - never convert to/from cents or assume USD conversion.
 
 # System Architecture
 

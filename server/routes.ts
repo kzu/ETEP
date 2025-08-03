@@ -325,7 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const notification = await storage.createNotification({
             userId: submission.submittedById,
             title: "Tarea aprobada",
-            message: `Tu tarea ha sido aprobada. +$${(submission.totalAmount / 100).toFixed(2)}`,
+            message: `Tu tarea ha sido aprobada. +$${submission.totalAmount}`,
             type: "task_approved",
             relatedId: submission.id
           });
@@ -389,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const notification = await storage.createNotification({
         userId: validatedData.toUserId,
         title: "Pago recibido",
-        message: `¡Recibiste $${(validatedData.amount / 100).toFixed(2)} de papá! Se agregó a tu dinero acumulado.`,
+        message: `¡Recibiste $${validatedData.amount} de papá! Se agregó a tu dinero acumulado.`,
         type: "payment_received",
         relatedId: payment.id
       });
