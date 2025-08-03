@@ -158,8 +158,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can view tasks" });
+      // Check if user has permission to view tasks (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can view tasks" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -238,8 +240,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can create tasks" });
+      // Check if user has permission to create tasks (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can create tasks" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -343,22 +347,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const submission = await storage.createTaskSubmission(validatedData);
       
-      // Create notification for all parents in the family
+      // Create notification for all parents and collaborators in the family
       const familyMembers = await storage.getFamilyMembers(familyId);
-      const parents = familyMembers.filter(member => member.role === 'parent').map(member => member.user);
+      const parentsAndCollaborators = familyMembers.filter(member => 
+        member.role === 'admin' || member.role === 'collaborator'
+      ).map(member => member.user);
       
-      for (const parent of parents) {
+      for (const parentOrCollaborator of parentsAndCollaborators) {
         const notification = await storage.createNotification({
           familyId,
-          userId: parent.id,
+          userId: parentOrCollaborator.id,
           title: "Nueva tarea enviada",
           message: `${user.firstName || user.email} ha enviado una tarea para revisión`,
           type: "task_submitted",
           relatedId: submission.id
         });
         
-        // Broadcast real-time notification to parent
-        broadcastNotificationToUser(parent.id, notification);
+        // Broadcast real-time notification to parent or collaborator
+        broadcastNotificationToUser(parentOrCollaborator.id, notification);
       }
       
       res.json(submission);
@@ -373,8 +379,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can view pending submissions" });
+      // Check if user has permission to view pending submissions (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can view pending submissions" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -395,8 +403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can view approved submissions" });
+      // Check if user has permission to view approved submissions (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can view approved submissions" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -417,8 +427,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can view rejected submissions" });
+      // Check if user has permission to view rejected submissions (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can view rejected submissions" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -440,8 +452,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const { id, action } = req.params;
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can review tasks" });
+      // Check if user has permission to review tasks (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can review tasks" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -506,8 +520,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can send payments" });
+      // Check if user has permission to send payments (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can send payments" });
       }
       
       const familyId = await getUserFamilyId(userId);
@@ -668,8 +684,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== 'parent') {
-        return res.status(403).json({ message: "Only parents can send invitations" });
+      // Check if user has permission to send invitations (parent role or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Only parents and collaborators can send invitations" });
       }
 
       // Get user's family and role
@@ -690,9 +708,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid role specified" });
       }
 
-      // Only admins can invite other admins or remove members
+      // Only admins can invite other admins
       if (inviteeRole === 'admin' && userRole !== 'admin') {
         return res.status(403).json({ message: "Only admins can invite other admins" });
+      }
+      
+      // Check if user has permission to invite (admin or collaborator)
+      if (userRole !== 'admin' && userRole !== 'collaborator') {
+        return res.status(403).json({ message: "Only administrators and collaborators can send invitations" });
       }
 
       const invitation = await storage.createFamilyInvitation(family.id, userId, inviteeEmail, inviteeRole);
@@ -942,8 +965,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userRole = await storage.getUserFamilyRole(userId);
-      if (invitation.invitedByUserId !== userId && userRole !== 'admin') {
-        return res.status(403).json({ message: "Only the invitation sender or admins can cancel invitations" });
+      if (invitation.invitedByUserId !== userId && userRole !== 'admin' && userRole !== 'collaborator') {
+        return res.status(403).json({ message: "Only the invitation sender, admins, or collaborators can cancel invitations" });
       }
 
       await storage.cancelInvitation(invitationId);
@@ -959,10 +982,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { memberId } = req.params;
       
-      // Check if current user is admin
+      // Check if current user has permission to remove members (admin or collaborator)
       const userRole = await storage.getUserFamilyRole(userId);
-      if (userRole !== 'admin') {
-        return res.status(403).json({ message: "Only administrators can remove family members" });
+      if (userRole !== 'admin' && userRole !== 'collaborator') {
+        return res.status(403).json({ message: "Only administrators and collaborators can remove family members" });
+      }
+      
+      // Check the role of the member being removed
+      const memberRole = await storage.getUserFamilyRole(memberId);
+      
+      // Collaborators cannot remove administrators
+      if (userRole === 'collaborator' && memberRole === 'admin') {
+        return res.status(403).json({ message: "Collaborators cannot remove administrators from the family" });
       }
 
       const family = await storage.getFamilyByUserId(userId);
@@ -999,15 +1030,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { memberId } = req.params;
       const { newRole } = req.body;
       
-      // Check if current user is admin
+      // Check if current user has permission to change roles (admin or collaborator)
       const userRole = await storage.getUserFamilyRole(userId);
-      if (userRole !== 'admin') {
-        return res.status(403).json({ message: "Only administrators can change member roles" });
+      if (userRole !== 'admin' && userRole !== 'collaborator') {
+        return res.status(403).json({ message: "Only administrators and collaborators can change member roles" });
       }
 
       // Prevent admin from changing their own role
       if (memberId === userId) {
         return res.status(403).json({ message: "Administrators cannot change their own role" });
+      }
+
+      // Get the current role of the member being changed
+      const memberCurrentRole = await storage.getUserFamilyRole(memberId);
+      
+      // Collaborators cannot change administrator roles or promote someone to admin
+      if (userRole === 'collaborator') {
+        if (memberCurrentRole === 'admin') {
+          return res.status(403).json({ message: "Collaborators cannot change administrator roles" });
+        }
+        if (newRole === 'admin') {
+          return res.status(403).json({ message: "Collaborators cannot promote members to administrator" });
+        }
       }
 
       // Validate new role

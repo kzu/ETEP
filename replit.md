@@ -35,6 +35,8 @@
 - **NEW**: Created comprehensive family management interface with member role management
 - **NEW**: Only Administrador parents can remove family members and change roles
 - **NEW**: Added family management page accessible via "Gestionar Familia" button in parent dashboard
+- **UPDATED**: Colaborador (Collaborator) role now has full administrative permissions for all family operations except removing administrators from the family
+- **UPDATED**: Collaborators can now invite children, create and manage tasks, approve/reject task submissions, manage payments, and receive real-time notifications about task activities
 
 # User Preferences
 
