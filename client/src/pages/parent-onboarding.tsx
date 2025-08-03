@@ -87,7 +87,7 @@ export default function ParentOnboarding() {
   // Create family mutation
   const createFamilyMutation = useMutation({
     mutationFn: async (familyName: string) => {
-      return await apiRequest('POST', '/api/family/create', { name: familyName });
+      return await apiRequest('/api/family/create', 'POST', { name: familyName });
     },
     onSuccess: () => {
       toast({ 
@@ -121,7 +121,7 @@ export default function ParentOnboarding() {
   // Accept invitation mutation
   const acceptInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      return await apiRequest('PATCH', `/api/family-invitations/${invitationId}/accept`, {});
+      return await apiRequest(`/api/family-invitations/${invitationId}/accept`, 'PATCH', {});
     },
     onSuccess: () => {
       toast({ 
@@ -156,7 +156,7 @@ export default function ParentOnboarding() {
   // Reject invitation mutation
   const rejectInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      return await apiRequest('PATCH', `/api/family-invitations/${invitationId}/reject`, {});
+      return await apiRequest(`/api/family-invitations/${invitationId}/reject`, 'PATCH', {});
     },
     onSuccess: () => {
       toast({ 

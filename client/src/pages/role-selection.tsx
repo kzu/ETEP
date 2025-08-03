@@ -35,7 +35,7 @@ export default function RoleSelection() {
   // Role selection mutation for children only (parents go to onboarding)
   const selectRoleMutation = useMutation({
     mutationFn: async (data: { role: 'child'; parentEmail: string }) => {
-      return await apiRequest('PATCH', '/api/user/role', data);
+      return await apiRequest('/api/user/role', 'PATCH', data);
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Rol seleccionado correctamente" });
@@ -58,7 +58,7 @@ export default function RoleSelection() {
   // Accept invitation mutation
   const acceptInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) => {
-      return await apiRequest('PATCH', `/api/family-invitations/${invitationId}/accept`, {});
+      return await apiRequest(`/api/family-invitations/${invitationId}/accept`, 'PATCH', {});
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Invitación aceptada. Ahora eres parte de la familia!" });

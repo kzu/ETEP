@@ -115,7 +115,7 @@ export default function FamilyManagement() {
   // Send invitation mutation
   const inviteMutation = useMutation({
     mutationFn: async (data: { inviteeEmail: string; inviteeRole: string }) =>
-      apiRequest('POST', '/api/family-invitations', data),
+      apiRequest('/api/family-invitations', 'POST', data),
     onSuccess: () => {
       toast({
         title: "Invitación enviada",
@@ -137,7 +137,7 @@ export default function FamilyManagement() {
   // Remove member mutation
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) =>
-      apiRequest('DELETE', `/api/family/members/${memberId}`),
+      apiRequest(`/api/family/members/${memberId}`, 'DELETE'),
     onSuccess: () => {
       toast({
         title: "Miembro removido",
@@ -157,7 +157,7 @@ export default function FamilyManagement() {
   // Change role mutation
   const changeRoleMutation = useMutation({
     mutationFn: async ({ memberId, newRole }: { memberId: string; newRole: string }) =>
-      apiRequest('PATCH', `/api/family/members/${memberId}/role`, { newRole }),
+      apiRequest(`/api/family/members/${memberId}/role`, 'PATCH', { newRole }),
     onSuccess: () => {
       toast({
         title: "Rol actualizado",
@@ -177,7 +177,7 @@ export default function FamilyManagement() {
   // Cancel invitation mutation
   const cancelInvitationMutation = useMutation({
     mutationFn: async (invitationId: string) =>
-      apiRequest('DELETE', `/api/family/invitations/${invitationId}`),
+      apiRequest(`/api/family/invitations/${invitationId}`, 'DELETE'),
     onSuccess: () => {
       toast({
         title: "Invitación cancelada",

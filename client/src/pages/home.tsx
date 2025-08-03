@@ -137,7 +137,7 @@ export default function Home() {
   // Mutations
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      await apiRequest('POST', '/api/tasks', taskData);
+      await apiRequest('/api/tasks', 'POST', taskData);
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea creada exitosamente" });
@@ -161,7 +161,7 @@ export default function Home() {
 
   const submitTaskMutation = useMutation({
     mutationFn: async ({ taskId, units, totalAmount }: any) => {
-      await apiRequest('POST', '/api/task-submissions', {
+      await apiRequest('/api/task-submissions', 'POST', {
         taskId,
         units,
         totalAmount
@@ -188,7 +188,7 @@ export default function Home() {
 
   const reviewTaskMutation = useMutation({
     mutationFn: async ({ submissionId, action }: { submissionId: string, action: 'approve' | 'reject' }) => {
-      await apiRequest('PATCH', `/api/task-submissions/${submissionId}/${action}`, {});
+      await apiRequest(`/api/task-submissions/${submissionId}/${action}`, 'PATCH', {});
     },
     onSuccess: (_, { action }) => {
       toast({ title: "Éxito", description: "Tarea revisada exitosamente" });
@@ -224,7 +224,7 @@ export default function Home() {
 
   const sendPaymentMutation = useMutation({
     mutationFn: async ({ toUserId, amount }: { toUserId: string, amount: number }) => {
-      await apiRequest('POST', '/api/payments', { toUserId, amount });
+      await apiRequest('/api/payments', 'POST', { toUserId, amount });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Payment sent. The child must confirm it." });
@@ -247,7 +247,7 @@ export default function Home() {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      await apiRequest('PATCH', `/api/tasks/${taskData.id}`, taskData);
+      await apiRequest(`/api/tasks/${taskData.id}`, 'PATCH', taskData);
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea actualizada exitosamente" });
@@ -270,7 +270,7 @@ export default function Home() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      await apiRequest('DELETE', `/api/tasks/${taskId}`, {});
+      await apiRequest(`/api/tasks/${taskId}`, 'DELETE', {});
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Tarea eliminada exitosamente" });
@@ -295,7 +295,7 @@ export default function Home() {
 
   const inviteChildMutation = useMutation({
     mutationFn: async (childEmail: string) => {
-      await apiRequest('POST', '/api/family-invitations', { childEmail });
+      await apiRequest('/api/family-invitations', 'POST', { childEmail });
     },
     onSuccess: () => {
       toast({ title: "Éxito", description: "Invitación enviada correctamente" });
