@@ -35,13 +35,14 @@ import {
   Home as HomeIcon,
   Users
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { NotificationIcon } from "@/components/NotificationIcon";
 
 export default function Home() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [currentView, setCurrentView] = useState<'parent' | 'child'>('parent');
   const [showMobileNav, setShowMobileNav] = useState(false);
 
@@ -67,6 +68,20 @@ export default function Home() {
       setCurrentView(role === 'child' ? 'child' : 'parent');
     }
   }, [user]);
+
+  // Auto-redirect to family management if no children and user is parent
+  useEffect(() => {
+    if (isParent && !childrenLoading && children && Array.isArray(children) && children.length === 0) {
+      // Show informative message and redirect
+      toast({
+        title: "Sin hijos en la familia",
+        description: "Redirigiendo a gestión familiar para invitar hijos...",
+      });
+      setTimeout(() => {
+        setLocation('/family');
+      }, 2000);
+    }
+  }, [isParent, children, childrenLoading, setLocation, toast]);
 
   // Get current family role for query enabling
   const currentFamilyRole = (user as any)?.currentFamilyRole;
@@ -123,9 +138,7 @@ export default function Home() {
   // Task submission states
   const [sessionUnits, setSessionUnits] = useState<Record<string, number>>({});
   
-  // Invite child states
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
+
   
   // Task creation modal state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -293,28 +306,7 @@ export default function Home() {
 
   // Payment confirmation removed - payments are now automatically processed
 
-  const inviteChildMutation = useMutation({
-    mutationFn: async (childEmail: string) => {
-      await apiRequest('/api/family-invitations', 'POST', { childEmail });
-    },
-    onSuccess: () => {
-      toast({ title: "Éxito", description: "Invitación enviada correctamente" });
-      setShowInviteModal(false);
-      setInviteEmail('');
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "No autorizado",
-          description: "Iniciando sesión nuevamente...",
-          variant: "destructive",
-        });
-        setTimeout(() => window.location.href = "/api/login", 500);
-        return;
-      }
-      toast({ title: "Error", description: "No se pudo enviar la invitación", variant: "destructive" });
-    },
-  });
+
 
   // Helper functions
   // Helper function to format currency (no conversion, just formatting)
@@ -474,18 +466,7 @@ export default function Home() {
                       </div>
                     </Card>
                   ))}
-                  
-                  {/* Add Child Card */}
-                  <Card 
-                    className="p-6 border-dashed border-2 hover:border-gray-400 cursor-pointer transition-colors"
-                    onClick={() => setShowInviteModal(true)}
-                  >
-                    <div className="flex flex-col items-center justify-center text-center h-full">
-                      <UserPlus className="h-12 w-12 text-gray-400 mb-3" />
-                      <h3 className="font-medium text-gray-900 mb-1">Add Child</h3>
-                      <p className="text-sm text-gray-500">Invite another child to the app</p>
-                    </div>
-                  </Card>
+
                 </>
               )}
             </div>
@@ -899,61 +880,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Invite Child Modal */}
-      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <UserPlus className="h-5 w-5" />
-              <span>Invite Child</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="inviteEmail">Child's Email</Label>
-              <Input
-                id="inviteEmail"
-                type="email"
-                placeholder="child@example.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Your child will receive an invitation to join the family when they log in
-              </p>
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowInviteModal(false);
-                  setInviteEmail('');
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => inviteChildMutation.mutate(inviteEmail)}
-                disabled={!inviteEmail.trim() || inviteChildMutation.isPending}
-              >
-                {inviteChildMutation.isPending ? (
-                  <>
-                    <Clock className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Enviar Invitación
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Create Task Modal */}
       <Dialog open={showCreateTaskModal} onOpenChange={setShowCreateTaskModal}>
