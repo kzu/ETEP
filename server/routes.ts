@@ -620,6 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
         
         const notification = await storage.createNotification({
+          familyId: family.id,
           userId: inviteeUser.id,
           title: "Invitación familiar",
           message: `${user.firstName || 'Alguien'} te ha invitado a unirte a la familia "${family.name}" como ${roleText}.`,
@@ -678,9 +679,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create balance if the user becomes a child
       if (invitation.inviteeRole === 'child') {
-        let balance = await storage.getBalance(userId);
+        let balance = await storage.getBalance(userId, invitation.familyId);
         if (!balance) {
-          balance = await storage.createBalance(userId);
+          balance = await storage.createBalance(userId, invitation.familyId);
         }
       }
       
@@ -690,6 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       invitation.inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
       
       const notification = await storage.createNotification({
+        familyId: invitation.familyId,
         userId: invitation.invitedByUserId,
         type: 'invitation_accepted',
         title: 'Invitación Aceptada',
@@ -726,6 +728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       invitation.inviteeRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
       
       const notification = await storage.createNotification({
+        familyId: invitation.familyId,
         userId: invitation.invitedByUserId,
         type: 'invitation_rejected',
         title: 'Invitación Rechazada',
@@ -869,6 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification for the removed member
       const user = await storage.getUser(userId);
       const notification = await storage.createNotification({
+        familyId: family.id,
         userId: memberId,
         title: "Removido de la familia",
         message: `${user?.firstName || 'Un administrador'} te ha removido de la familia "${family.name}".`,
@@ -921,6 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       newRole === 'collaborator' ? 'Colaborador' : 'Hijo/a';
       
       const notification = await storage.createNotification({
+        familyId: family.id,
         userId: memberId,
         title: "Rol actualizado",
         message: `${user?.firstName || 'Un administrador'} ha cambiado tu rol a ${roleText} en la familia "${family.name}".`,
