@@ -100,6 +100,9 @@ export interface IStorage {
   
   // Family creation operations
   createFamilyWithAdmin(userId: string, familyName: string): Promise<Family>;
+  
+  // Child data reset operations
+  resetChildData(childId: string, familyId: string): Promise<void>;
 }
 
 // Helper function to generate Gravatar URL
@@ -663,6 +666,41 @@ export class DatabaseStorage implements IStorage {
       });
 
     return family;
+  }
+
+  async resetChildData(childId: string, familyId: string): Promise<void> {
+    // Delete all task submissions for the child in this family
+    await db.delete(taskSubmissions)
+      .where(and(
+        eq(taskSubmissions.userId, childId),
+        eq(taskSubmissions.familyId, familyId)
+      ));
+
+    // Delete all payments for the child in this family
+    await db.delete(payments)
+      .where(and(
+        eq(payments.toUserId, childId),
+        eq(payments.familyId, familyId)
+      ));
+
+    // Reset balance to zero for the child in this family
+    await db.delete(balances)
+      .where(and(
+        eq(balances.userId, childId),
+        eq(balances.familyId, familyId)
+      ));
+
+    // Create a fresh balance record with zero amounts
+    await db.insert(balances)
+      .values({
+        id: nanoid(),
+        userId: childId,
+        familyId: familyId,
+        accumulated: 0,
+        pending: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
   }
 }
 

@@ -167,6 +167,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset child data endpoint
+  app.post('/api/children/:childId/reset', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const childId = req.params.childId;
+      
+      // Check if user has permission (parent or collaborator in family)
+      const userFamilyRole = await storage.getUserFamilyRole(userId);
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== 'parent' && userFamilyRole !== 'collaborator')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get user's family ID
+      const familyId = await getUserFamilyId(userId);
+      if (!familyId) {
+        return res.status(400).json({ message: "User not part of any family" });
+      }
+      
+      // Verify the child belongs to the same family
+      const childFamilyRole = await storage.getUserFamilyRole(childId);
+      const childFamilyId = await getUserFamilyId(childId);
+      if (childFamilyId !== familyId || childFamilyRole !== 'child') {
+        return res.status(403).json({ message: "Child not found in your family" });
+      }
+      
+      // Reset child data
+      await storage.resetChildData(childId, familyId);
+      
+      res.json({ success: true, message: "Child data reset successfully" });
+    } catch (error) {
+      console.error("Error resetting child data:", error);
+      res.status(500).json({ message: "Failed to reset child data" });
+    }
+  });
+
   // Task routes
   app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {

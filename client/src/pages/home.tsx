@@ -33,7 +33,8 @@ import {
   ListTodo,
   User,
   Home as HomeIcon,
-  Users
+  Users,
+  RotateCcw
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { NotificationIcon } from "@/components/NotificationIcon";
@@ -390,6 +391,38 @@ export default function Home() {
     }
   });
 
+  // Reset child data mutation
+  const resetChildMutation = useMutation({
+    mutationFn: async (childId: string) =>
+      apiRequest(`/api/children/${childId}/reset`, 'POST', {}),
+    onSuccess: () => {
+      toast({
+        title: "Éxito",
+        description: "Datos del hijo reiniciados exitosamente."
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/children"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/approved"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/rejected"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/task-submissions/pending"] });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Iniciando sesión nuevamente...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo reiniciar los datos del hijo",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Payment confirmation removed - payments are now automatically processed
 
 
@@ -546,7 +579,7 @@ export default function Home() {
                           </span>
                         </div>
                         
-                        <div className="pt-3 border-t border-gray-100">
+                        <div className="pt-3 border-t border-gray-100 space-y-2">
                           <Button 
                             className="w-full"
                             onClick={() => sendPaymentMutation.mutate({ 
@@ -557,6 +590,15 @@ export default function Home() {
                           >
                             <CreditCard className="mr-2 h-4 w-4" />
                             Pagar Pendiente
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => resetChildMutation.mutate(child.id)}
+                            disabled={resetChildMutation.isPending}
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            {resetChildMutation.isPending ? "Reiniciando..." : "Reset"}
                           </Button>
                         </div>
                       </div>
