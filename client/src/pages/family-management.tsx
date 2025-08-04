@@ -376,8 +376,7 @@ export default function FamilyManagement() {
                   <div className="flex-1">
                     <p className="font-medium">{invitation.inviteeEmail}</p>
                     <p className="text-sm text-muted-foreground">
-                      Rol: {invitation.inviteeRole === 'parent' ? 'Padre' : 'Hijo'} 
-                      {invitation.inviteeRole === 'parent' && invitation.parentRole && ` (${invitation.parentRole === 'admin' ? 'Administrador' : 'Colaborador'})`}
+                      Rol: {getRoleText(invitation.inviteeRole)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Enviada por: {invitation.invitedBy?.firstName || invitation.invitedBy?.email}
