@@ -137,8 +137,7 @@ export function setupAuth(app: any) {
       auth0Strategy._callbackURL = callbackURL;
       
       passport.authenticate("auth0", {
-        scope: "openid email profile",
-        callbackURL: callbackURL
+        scope: "openid email profile"
       })(req, res, next);
     });
 
