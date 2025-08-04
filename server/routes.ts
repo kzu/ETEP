@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { storage } from "./storage";
+import { storage } from "./storage-config";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema, updateUserNameSchema } from "@shared/schema";
 import { z } from "zod";
@@ -53,7 +53,7 @@ async function broadcastNotificationToFamily(familyId: string, notification: any
   });
   
   // Broadcast to all family members
-  familyMembers.forEach(member => {
+  familyMembers.forEach((member: any) => {
     const connections = userConnections.get(member.userId);
     if (connections) {
       connections.forEach(ws => {
@@ -147,11 +147,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all family members who are children
       const allMembers = await storage.getFamilyMembers(familyId);
-      const children = allMembers.filter(member => member.role === 'child').map(member => member.user);
+      const children = allMembers.filter((member: any) => member.role === 'child').map((member: any) => member.user);
       
       // Get balances for each child
       const childrenWithBalances = await Promise.all(
-        children.map(async (child) => {
+        children.map(async (child: any) => {
           let balance = await storage.getBalance(child.id, familyId);
           if (!balance) {
             balance = await storage.createBalance(child.id, familyId);
@@ -347,7 +347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all family memberships for the user
       const familyMemberships = await storage.getUserFamilyMemberships(userId);
-      const childMemberships = familyMemberships.filter(m => m.role === 'child');
+      const childMemberships = familyMemberships.filter((m: any) => m.role === 'child');
       
       if (childMemberships.length === 0) {
         return res.status(403).json({ message: "Only children can view assigned tasks" });
@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const family = await storage.getFamilyById(membership.familyId);
         
         // Add family information to each task
-        const tasksWithFamily = tasks.map(task => ({
+        const tasksWithFamily = tasks.map((task: any) => ({
           ...task,
           family: {
             id: family?.id,
@@ -438,9 +438,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create notification for all parents and collaborators in the family
       const familyMembers = await storage.getFamilyMembers(familyId);
-      const parentsAndCollaborators = familyMembers.filter(member => 
+      const parentsAndCollaborators = familyMembers.filter((member: any) => 
         member.role === 'admin' || member.role === 'collaborator'
-      ).map(member => member.user);
+      ).map((member: any) => member.user);
       
       for (const parentOrCollaborator of parentsAndCollaborators) {
         const notification = await storage.createNotification({
@@ -657,9 +657,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Broadcast task status update to all parents and collaborators in the family
       const familyMembers = await storage.getFamilyMembers(familyId);
-      const parentsAndCollaborators = familyMembers.filter(member => 
+      const parentsAndCollaborators = familyMembers.filter((member: any) => 
         member.role === 'admin' || member.role === 'collaborator'
-      ).map(member => member.user);
+      ).map((member: any) => member.user);
       
       for (const parentOrCollaborator of parentsAndCollaborators) {
         // Skip the user who performed the action (they'll see the update immediately)
@@ -756,9 +756,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Broadcast payment update to all parents and collaborators in the family
       const familyMembers = await storage.getFamilyMembers(familyId);
-      const parentsAndCollaborators = familyMembers.filter(member => 
+      const parentsAndCollaborators = familyMembers.filter((member: any) => 
         member.role === 'admin' || member.role === 'collaborator'
-      ).map(member => member.user);
+      ).map((member: any) => member.user);
       
       for (const parentOrCollaborator of parentsAndCollaborators) {
         // Skip the user who performed the action (they'll see the update immediately)
@@ -967,7 +967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Fetching invitations for user ${userId} with email ${user.email}`);
       const invitations = await storage.getInvitationsByEmail(user.email);
-      console.log(`Found ${invitations.length} invitations:`, invitations.map(i => i.id));
+      console.log(`Found ${invitations.length} invitations:`, invitations.map((i: any) => i.id));
       res.json(invitations);
     } catch (error) {
       console.error("Error fetching invitations:", error);

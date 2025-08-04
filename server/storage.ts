@@ -44,7 +44,6 @@ export interface IStorage {
   getFamilyById(familyId: string): Promise<Family | undefined>;
   getFamilyMembers(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
   getFamilyParents(familyId: string): Promise<(FamilyMembership & { user: User })[]>;
-  getUserFamilyRole(userId: string): Promise<string | undefined>;
   getUserFamilyMemberships(userId: string): Promise<FamilyMembership[]>;
   createFamily(name: string, adminUserId: string): Promise<Family>;
   addFamilyMember(familyId: string, userId: string, role: string): Promise<FamilyMembership>;
@@ -92,7 +91,7 @@ export interface IStorage {
   getInvitationsByEmail(email: string): Promise<FamilyInvitation[]>;
   getInvitationById(id: string): Promise<FamilyInvitation | undefined>;
   getPendingFamilyInvitations(familyId: string): Promise<FamilyInvitation[]>;
-  getUserFamilyRole(userId: string): Promise<string | null>;
+  getUserFamilyRole(userId: string): Promise<string | null | undefined>;
   cancelInvitation(invitationId: string): Promise<void>;
   acceptInvitation(invitationId: string, userId: string): Promise<void>;
   rejectInvitation(invitationId: string): Promise<void>;
