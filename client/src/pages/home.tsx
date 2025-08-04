@@ -529,7 +529,6 @@ export default function Home() {
                         />
                         <div>
                           <h3 className="font-semibold text-gray-900">{child.firstName || child.email}</h3>
-                          <p className="text-sm text-gray-500">Child</p>
                         </div>
                       </div>
                       
