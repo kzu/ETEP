@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage-config";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, getSession, validateAuth0Config } from "./auth0";
+import passport from "passport";
 import { insertTaskSchema, insertTaskSubmissionSchema, insertPaymentSchema, updateUserRoleSchema, updateUserNameSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -66,13 +67,30 @@ async function broadcastNotificationToFamily(familyId: string, notification: any
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Validate Auth0 configuration - only validate if we're not in development with missing credentials
+  try {
+    validateAuth0Config();
+  } catch (error: any) {
+    console.warn("Auth0 configuration missing:", error.message);
+    console.warn("Server will start but authentication will not work until Auth0 credentials are provided.");
+  }
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Setup session middleware
+  app.use(getSession());
+  
+  // Initialize passport
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Setup Auth0 authentication
+  setupAuth(app);
+
+  // Auth routes are now handled in setupAuth(app)
+  
+  // Additional user info route (the main /api/auth/user is in auth0.ts)
+  app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -112,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user name
   app.patch('/api/auth/user/name', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const nameData = updateUserNameSchema.parse(req.body);
       
       const updatedUser = await storage.updateUserName(userId, nameData);
@@ -130,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Family routes
   app.get('/api/children', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to view children (parent role or collaborator in family)
@@ -170,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reset child data endpoint
   app.post('/api/children/:childId/reset', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const childId = req.params.childId;
       
       // Check if user has permission (parent or collaborator in family)
@@ -206,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task routes
   app.get('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to view tasks (parent role or collaborator in family)
@@ -231,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a task (template)
   app.patch('/api/tasks/:taskId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { taskId } = req.params;
       const { title, description, type, paymentAmount, assignedToIds } = req.body;
       
@@ -271,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a task (template)
   app.delete('/api/tasks/:taskId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { taskId } = req.params;
       
       const familyId = await getUserFamilyId(userId);
@@ -302,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to create tasks (parent role or collaborator in family)
@@ -343,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/tasks/assigned', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Get all family memberships for the user
       const familyMemberships = await storage.getUserFamilyMemberships(userId);
@@ -383,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/tasks/created', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
@@ -401,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task submission routes
   app.post('/api/task-submissions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       const familyId = await getUserFamilyId(userId);
@@ -471,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/task-submissions/pending', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to view pending submissions (parent role or collaborator in family)
@@ -495,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/task-submissions/approved', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       const userFamilyRole = await storage.getUserFamilyRole(userId);
@@ -528,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/task-submissions/rejected', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       const userFamilyRole = await storage.getUserFamilyRole(userId);
@@ -562,7 +580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New endpoint for child history (unified approved + rejected)
   app.get('/api/task-submissions/history', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       const userFamilyRole = await storage.getUserFamilyRole(userId);
@@ -596,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/task-submissions/:id/:action', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const { id, action } = req.params;
       
@@ -692,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment routes
   app.post('/api/payments', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to send payments (parent role or collaborator in family)
@@ -784,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification routes
   app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
@@ -807,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       const familyId = await getUserFamilyId(userId);
@@ -827,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const familyId = await getUserFamilyId(userId);
       if (!familyId) {
@@ -847,7 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role and family management routes
   app.patch('/api/user/role', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = updateUserRoleSchema.parse(req.body);
       
       const updatedUser = await storage.updateUserRole(userId, validatedData);
@@ -874,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/family-invitations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       // Check if user has permission to send invitations (parent role or collaborator in family)
@@ -958,7 +976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/family-invitations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || !user.email) {
@@ -977,7 +995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/family-invitations/:id/accept', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       const invitation = await storage.getInvitationById(id);
@@ -1031,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/family-invitations/:id/reject', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       const invitation = await storage.getInvitationById(id);
@@ -1069,7 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Family management routes
   app.post('/api/family/create', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { name } = req.body;
       
       if (!name || !name.trim()) {
@@ -1097,7 +1115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/family', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const family = await storage.getFamilyByUserId(userId);
       
       if (!family) {
@@ -1114,7 +1132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/family/parents', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const family = await storage.getFamilyByUserId(userId);
       
       if (!family) {
@@ -1131,7 +1149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/family/invitations/pending', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const family = await storage.getFamilyByUserId(userId);
       
       if (!family) {
@@ -1148,7 +1166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/family/invitations/:invitationId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { invitationId } = req.params;
       
       // Check if user has permission to cancel this invitation
@@ -1172,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/family/members/:memberId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { memberId } = req.params;
       
       // Check if current user has permission to remove members (admin or collaborator)
@@ -1219,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/family/members/:memberId/role', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { memberId } = req.params;
       const { newRole } = req.body;
       

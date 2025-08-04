@@ -41,6 +41,7 @@
 - **NEW SUBMISSION MODEL**: Task submissions now copy task data (title, description, type, payment amount) at submission time
 - **TEMPLATE SYSTEM**: Tasks now serve exclusively as templates - modifications to tasks don't affect past submissions
 - **PAYMENT PRESERVATION**: Historical submissions maintain their original payment amounts even when task templates are updated
+- **AUTHENTICATION MIGRATION**: Switched from Replit Auth to Auth0 for enhanced security and custom domain support (January 4, 2025)
 
 # User Preferences
 
@@ -79,15 +80,16 @@ Currency: All amounts are in ARS (Argentine Pesos) as whole numbers - never conv
   - Families and family_memberships (multi-parent support with role-based access)
 
 ## Authentication & Authorization
-- **Provider**: Replit's OpenID Connect service
-- **Strategy**: Passport.js with session persistence
+- **Provider**: Auth0 authentication service (migrated from Replit Auth)
+- **Strategy**: Passport.js with Auth0 strategy and session persistence
 - **Security**: HTTP-only cookies with secure flags and CSRF protection
 - **Role-based Access**: Parent/child role differentiation with appropriate permissions
+- **Custom Domain Support**: Configured for both custom domains and Replit hosting
 
 ## External Dependencies
 
 - **Database Hosting**: Neon PostgreSQL serverless
-- **Authentication Provider**: Replit OIDC service
+- **Authentication Provider**: Auth0 authentication service (replaced Replit OIDC)
 - **Development Platform**: Replit with live reload and error overlay
 - **UI Components**: Radix UI primitives with shadcn/ui styling system
 - **Build Tools**: Vite for frontend bundling and esbuild for backend compilation
