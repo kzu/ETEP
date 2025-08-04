@@ -684,4 +684,45 @@ export class AzureTableStorage implements IStorage {
     // Mark all notifications for the child as read
     await this.markAllNotificationsAsRead(childId, familyId);
   }
+
+  // Additional notification methods for users without families
+  async getNotificationsByUserWithoutFamily(userId: string): Promise<Notification[]> {
+    const filter = this.client.createFilter({ forUserId: userId });
+    const entities = await this.client.queryEntities('notifications', filter);
+    
+    return entities.map(entity => ({
+      id: entity.rowKey,
+      type: entity.type,
+      title: entity.title,
+      message: entity.message,
+      forUserId: entity.forUserId,
+      familyId: entity.familyId || '',
+      isRead: entity.isRead === 'true',
+      createdAt: new Date(entity.timestamp),
+      relatedId: entity.relatedId || null,
+      actionData: entity.actionData ? JSON.parse(entity.actionData) : null,
+    }));
+  }
+
+  async markNotificationAsReadWithoutFamily(notificationId: string, userId: string): Promise<void> {
+    try {
+      const entity = await this.client.getEntity('notifications', 'notification', notificationId);
+      if (entity && entity.forUserId === userId) {
+        entity.isRead = 'true';
+        await this.client.upsertEntity('notifications', entity);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  }
+
+  async markAllNotificationsAsReadWithoutFamily(userId: string): Promise<void> {
+    const filter = this.client.createFilter({ forUserId: userId, isRead: 'false' });
+    const entities = await this.client.queryEntities('notifications', filter);
+    
+    for (const entity of entities) {
+      entity.isRead = 'true';
+      await this.client.upsertEntity('notifications', entity);
+    }
+  }
 }

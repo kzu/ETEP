@@ -1,15 +1,8 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+// DISABLED - Using Azure Table Storage exclusively, no PostgreSQL
+// This file is kept for compatibility but all functions throw errors
 
-neonConfig.webSocketConstructor = ws;
+export const pool = null;
+export const db = null;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+// If anyone tries to use this, they'll get a clear error
+console.warn("PostgreSQL database connection disabled - using Azure Table Storage exclusively");

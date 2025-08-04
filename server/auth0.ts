@@ -1,9 +1,9 @@
 import { Router, RequestHandler } from "express";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import passport from "passport";
 import { Strategy as Auth0Strategy } from "passport-auth0";
-import { storage } from "./storage.ts";
+import { storage } from "./storage-config";
 
 // Auth0 Strategy Configuration (initialized later)
 let auth0Strategy: any = null;
@@ -73,15 +73,12 @@ passport.deserializeUser((user: any, done) => {
   done(null, user);
 });
 
-// Session configuration - reusing the same session setup as before
+// Session configuration using in-memory storage - NO PostgreSQL
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
+  const MemStore = MemoryStore(session);
+  const sessionStore = new MemStore({
+    checkPeriod: sessionTtl, // Prune expired entries every week
   });
   
   return session({

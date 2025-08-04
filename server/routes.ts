@@ -603,7 +603,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Combine and sort by review date (or submitted date for submitted)
       const allSubmissions = [...submittedSubmissions, ...approvedSubmissions, ...rejectedSubmissions]
-        .sort((a, b) => new Date(b.reviewedAt || b.submittedAt).getTime() - new Date(a.reviewedAt || a.submittedAt).getTime());
+        .sort((a, b) => {
+          const dateA = new Date(a.reviewedAt || a.submittedAt || 0);
+          const dateB = new Date(b.reviewedAt || b.submittedAt || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
       
       res.json(allSubmissions);
     } catch (error) {
