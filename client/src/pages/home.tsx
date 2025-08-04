@@ -119,19 +119,7 @@ export default function Home() {
     enabled: isChild,
   });
 
-  // Auto-redirect to family management if no children and user is parent
-  useEffect(() => {
-    if (isParent && !childrenLoading && children && Array.isArray(children) && children.length === 0) {
-      // Show informative message and redirect
-      toast({
-        title: "Sin hijos en la familia",
-        description: "Redirigiendo a gestión familiar para invitar hijos...",
-      });
-      setTimeout(() => {
-        setLocation('/family');
-      }, 2000);
-    }
-  }, [isParent, children, childrenLoading, setLocation, toast]);
+
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -200,8 +188,9 @@ export default function Home() {
   // Task submission states
   const [sessionUnits, setSessionUnits] = useState<Record<string, number>>({});
   
+  // Invite functionality state
+  const [inviteEmail, setInviteEmail] = useState("");
 
-  
   // Task creation modal state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   
@@ -371,6 +360,36 @@ export default function Home() {
     },
   });
 
+  // Invite child mutation
+  const inviteMutation = useMutation({
+    mutationFn: async (data: { inviteeEmail: string; inviteeRole: string }) =>
+      apiRequest('/api/family-invitations', 'POST', data),
+    onSuccess: () => {
+      toast({
+        title: "Invitación enviada",
+        description: "La invitación ha sido enviada exitosamente."
+      });
+      setInviteEmail("");
+      queryClient.invalidateQueries({ queryKey: ["/api/children"] });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "No autorizado",
+          description: "Iniciando sesión nuevamente...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = "/api/login", 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo enviar la invitación",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Payment confirmation removed - payments are now automatically processed
 
 
@@ -394,6 +413,17 @@ export default function Home() {
   };
 
   const getSessionUnits = (taskId: string) => sessionUnits[taskId] || 1;
+
+  // Handle invite child
+  const handleSendInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    
+    inviteMutation.mutate({
+      inviteeEmail: inviteEmail.trim(),
+      inviteeRole: "child"
+    });
+  };
 
   // Helper functions for task filtering
   const getTaskSubmissionsByStatus = (status: string) => {
@@ -534,6 +564,37 @@ export default function Home() {
                     </Card>
                   ))}
 
+                  {/* Add Child Card - shown when no children exist */}
+                  {children && Array.isArray(children) && children.length === 0 && (
+                    <Card className="p-6 border-2 border-dashed border-gray-300 hover:border-accent transition-colors">
+                      <div className="text-center">
+                        <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Agregar Hijo</h3>
+                        <p className="text-sm text-gray-500 mb-4">Invita a tu hijo a unirse a la familia</p>
+                        
+                        <form onSubmit={handleSendInvite} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="childEmail">Email del hijo</Label>
+                            <Input
+                              id="childEmail"
+                              type="email"
+                              value={inviteEmail}
+                              onChange={(e) => setInviteEmail(e.target.value)}
+                              placeholder="hijo@ejemplo.com"
+                              required
+                            />
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="w-full"
+                            disabled={inviteMutation.isPending || !inviteEmail.trim()}
+                          >
+                            {inviteMutation.isPending ? "Enviando..." : "Enviar Invitación"}
+                          </Button>
+                        </form>
+                      </div>
+                    </Card>
+                  )}
                 </>
               )}
             </div>
