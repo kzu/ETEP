@@ -127,57 +127,77 @@ export function setupAuth(app: any) {
   if (process.env.AUTH0_DOMAIN && process.env.AUTH0_CLIENT_ID && process.env.AUTH0_CLIENT_SECRET) {
     const strategy = initializeAuth0Strategy();
     passport.use(strategy);
+    
+    console.log("Auth0 strategy initialized successfully");
+    
+    // Login route - redirect to Auth0
+    app.get("/api/login", passport.authenticate("auth0", {
+      scope: "openid email profile"
+    }));
+
+    // Callback route - handle Auth0 callback
+    app.get("/api/callback", 
+      passport.authenticate("auth0", { 
+        failureRedirect: "/login-error" 
+      }),
+      (req: any, res: any) => {
+        // Successful authentication, redirect to home
+        res.redirect("/");
+      }
+    );
+
+    // Logout route
+    app.get("/api/logout", (req: any, res: any) => {
+      const returnTo = `${req.protocol}://${req.get("host")}/`;
+      const logoutURL = new URL(`https://${process.env.AUTH0_DOMAIN}/v2/logout`);
+      
+      logoutURL.searchParams.set("client_id", process.env.AUTH0_CLIENT_ID!);
+      logoutURL.searchParams.set("returnTo", returnTo);
+      
+      req.logout((err: any) => {
+        if (err) {
+          console.error("Logout error:", err);
+        }
+        res.redirect(logoutURL.toString());
+      });
+    });
+
+    // Get current user route
+    app.get("/api/auth/user", isAuthenticated, async (req: any, res: any) => {
+      try {
+        const sessionUser = req.user as any;
+        const user = await storage.getUser(sessionUser.id);
+        
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    });
   } else {
     console.warn("Auth0 credentials not available - authentication routes will not be functional");
-  }
-  // Login route - redirect to Auth0
-  app.get("/api/login", passport.authenticate("auth0", {
-    scope: "openid email profile"
-  }));
-
-  // Callback route - handle Auth0 callback
-  app.get("/api/callback", 
-    passport.authenticate("auth0", { 
-      failureRedirect: "/login-error" 
-    }),
-    (req: any, res: any) => {
-      // Successful authentication, redirect to home
-      res.redirect("/");
-    }
-  );
-
-  // Logout route
-  app.get("/api/logout", (req: any, res: any) => {
-    const returnTo = `${req.protocol}://${req.get("host")}/`;
-    const logoutURL = new URL(`https://${process.env.AUTH0_DOMAIN}/v2/logout`);
     
-    logoutURL.searchParams.set("client_id", process.env.AUTH0_CLIENT_ID!);
-    logoutURL.searchParams.set("returnTo", returnTo);
-    
-    req.logout((err: any) => {
-      if (err) {
-        console.error("Logout error:", err);
-      }
-      res.redirect(logoutURL.toString());
+    // Provide fallback routes that return clear error messages
+    app.get("/api/login", (req: any, res: any) => {
+      res.status(503).json({ message: "Auth0 not configured" });
     });
-  });
-
-  // Get current user route
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res: any) => {
-    try {
-      const sessionUser = req.user as any;
-      const user = await storage.getUser(sessionUser.id);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+    
+    app.get("/api/callback", (req: any, res: any) => {
+      res.status(503).json({ message: "Auth0 not configured" });
+    });
+    
+    app.get("/api/logout", (req: any, res: any) => {
+      res.status(503).json({ message: "Auth0 not configured" });
+    });
+    
+    app.get("/api/auth/user", (req: any, res: any) => {
+      res.status(503).json({ message: "Auth0 not configured" });
+    });
+  }
 }
 
 // Validate required environment variables
