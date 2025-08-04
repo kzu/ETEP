@@ -16,6 +16,23 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Coins, 
@@ -34,7 +51,8 @@ import {
   User,
   Home as HomeIcon,
   Users,
-  RotateCcw
+  RotateCcw,
+  Settings
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { NotificationIcon } from "@/components/NotificationIcon";
@@ -553,7 +571,52 @@ export default function Home() {
               ) : (
                 <>
                   {children?.map((child: any) => (
-                    <Card key={child.id} className="p-6">
+                    <Card key={child.id} className="p-6 relative">
+                      {/* Settings gear icon in top-right corner */}
+                      <div className="absolute top-4 right-4">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-gray-100"
+                                  >
+                                    <Settings className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Reiniciar datos del hijo</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción eliminará permanentemente todas las tareas enviadas, 
+                                      aceptadas, rechazadas y reiniciará los balances acumulado y pendiente a cero.
+                                      <br /><br />
+                                      <strong>Esta acción no se puede deshacer.</strong>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => resetChildMutation.mutate(child.id)}
+                                      disabled={resetChildMutation.isPending}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      {resetChildMutation.isPending ? "Reiniciando..." : "Reiniciar"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reiniciar datos del hijo</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+
                       <div className="flex items-center space-x-3 mb-4">
                         <img 
                           src={child.profileImageUrl || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&h=60"} 
@@ -579,7 +642,7 @@ export default function Home() {
                           </span>
                         </div>
                         
-                        <div className="pt-3 border-t border-gray-100 space-y-2">
+                        <div className="pt-3 border-t border-gray-100">
                           <Button 
                             className="w-full"
                             onClick={() => sendPaymentMutation.mutate({ 
@@ -590,15 +653,6 @@ export default function Home() {
                           >
                             <CreditCard className="mr-2 h-4 w-4" />
                             Pagar Pendiente
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => resetChildMutation.mutate(child.id)}
-                            disabled={resetChildMutation.isPending}
-                          >
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            {resetChildMutation.isPending ? "Reiniciando..." : "Reset"}
                           </Button>
                         </div>
                       </div>
