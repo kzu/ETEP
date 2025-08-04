@@ -15,7 +15,7 @@ function initializeAuth0Strategy() {
         domain: process.env.AUTH0_DOMAIN!,
         clientID: process.env.AUTH0_CLIENT_ID!,
         clientSecret: process.env.AUTH0_CLIENT_SECRET!,
-        callbackURL: process.env.AUTH0_CALLBACK_URL || "/api/callback",
+        callbackURL: "/api/callback", // Will be dynamically constructed in the login route
       },
       async (
         accessToken: string,
@@ -128,10 +128,19 @@ export function setupAuth(app: any) {
     console.log("Auth0 strategy initialized successfully");
     console.log("Registering Auth0 routes: /api/login, /api/callback, /api/logout, /api/auth/user");
     
-    // Login route - redirect to Auth0
-    app.get("/api/login", passport.authenticate("auth0", {
-      scope: "openid email profile"
-    }));
+    // Login route - redirect to Auth0 with dynamic callback URL
+    app.get("/api/login", (req: any, res: any, next: any) => {
+      // Construct callback URL from current request
+      const callbackURL = `${req.protocol}://${req.get("host")}/api/callback`;
+      
+      // Update the strategy's callback URL dynamically
+      auth0Strategy._callbackURL = callbackURL;
+      
+      passport.authenticate("auth0", {
+        scope: "openid email profile",
+        callbackURL: callbackURL
+      })(req, res, next);
+    });
 
     // Callback route - handle Auth0 callback
     app.get("/api/callback", 
