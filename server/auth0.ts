@@ -126,6 +126,7 @@ export function setupAuth(app: any) {
     passport.use(strategy);
     
     console.log("Auth0 strategy initialized successfully");
+    console.log("Registering Auth0 routes: /api/login, /api/callback, /api/logout, /api/auth/user");
     
     // Login route - redirect to Auth0
     app.get("/api/login", passport.authenticate("auth0", {
@@ -134,10 +135,16 @@ export function setupAuth(app: any) {
 
     // Callback route - handle Auth0 callback
     app.get("/api/callback", 
+      (req: any, res: any, next: any) => {
+        console.log("Auth0 callback received:", req.url);
+        console.log("Query params:", req.query);
+        next();
+      },
       passport.authenticate("auth0", { 
         failureRedirect: "/login-error" 
       }),
       (req: any, res: any) => {
+        console.log("Auth0 authentication successful, user:", req.user?.email || req.user?.id);
         // Successful authentication, redirect to home
         res.redirect("/");
       }

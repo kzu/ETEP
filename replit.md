@@ -41,7 +41,9 @@
 - **NEW SUBMISSION MODEL**: Task submissions now copy task data (title, description, type, payment amount) at submission time
 - **TEMPLATE SYSTEM**: Tasks now serve exclusively as templates - modifications to tasks don't affect past submissions
 - **PAYMENT PRESERVATION**: Historical submissions maintain their original payment amounts even when task templates are updated
-- **AUTHENTICATION MIGRATION**: Switched from Replit Auth to Auth0 for enhanced security and custom domain support (January 4, 2025)
+- **AUTHENTICATION MIGRATION**: Successfully switched from Replit Auth to Auth0 with enhanced security and custom domain support (January 4, 2025)
+- **STORAGE MIGRATION**: Completely migrated from PostgreSQL to Azure Table Storage exclusively - no database dependencies (January 4, 2025)
+- **SESSION MANAGEMENT**: Switched from PostgreSQL-based sessions to in-memory storage for Auth0 compatibility (January 4, 2025)
 
 # User Preferences
 
@@ -80,17 +82,18 @@ Currency: All amounts are in ARS (Argentine Pesos) as whole numbers - never conv
   - Families and family_memberships (multi-parent support with role-based access)
 
 ## Authentication & Authorization
-- **Provider**: Auth0 authentication service (migrated from Replit Auth)
-- **Strategy**: Passport.js with Auth0 strategy and session persistence
+- **Provider**: Auth0 authentication service (successfully migrated from Replit Auth)
+- **Strategy**: Passport.js with Auth0 strategy and in-memory session storage
 - **Security**: HTTP-only cookies with secure flags and CSRF protection
 - **Role-based Access**: Parent/child role differentiation with appropriate permissions
-- **Custom Domain Support**: Configured for both custom domains and Replit hosting
+- **Custom Domain Support**: Fully configured for both custom domains and Replit hosting
+- **Session Storage**: In-memory storage using memorystore (no PostgreSQL dependency)
 
 ## External Dependencies
 
-- **Database Hosting**: Neon PostgreSQL serverless
+- **Data Storage**: Azure Table Storage (completely replaced PostgreSQL)
 - **Authentication Provider**: Auth0 authentication service (replaced Replit OIDC)
 - **Development Platform**: Replit with live reload and error overlay
 - **UI Components**: Radix UI primitives with shadcn/ui styling system
 - **Build Tools**: Vite for frontend bundling and esbuild for backend compilation
-- **Session Storage**: PostgreSQL-backed session store for scalability
+- **Session Storage**: In-memory storage using memorystore (no database dependency)
