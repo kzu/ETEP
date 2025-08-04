@@ -128,18 +128,10 @@ export function setupAuth(app: any) {
     console.log("Auth0 strategy initialized successfully");
     console.log("Registering Auth0 routes: /api/login, /api/callback, /api/logout, /api/auth/user");
     
-    // Login route - redirect to Auth0 with dynamic callback URL
-    app.get("/api/login", (req: any, res: any, next: any) => {
-      // Construct callback URL from current request
-      const callbackURL = `${req.protocol}://${req.get("host")}/api/callback`;
-      
-      // Update the strategy's callback URL dynamically
-      auth0Strategy._callbackURL = callbackURL;
-      
-      passport.authenticate("auth0", {
-        scope: "openid email profile"
-      })(req, res, next);
-    });
+    // Login route - redirect to Auth0
+    app.get("/api/login", passport.authenticate("auth0", {
+      scope: "openid email profile"
+    }));
 
     // Callback route - handle Auth0 callback
     app.get("/api/callback", 
