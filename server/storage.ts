@@ -672,7 +672,7 @@ export class DatabaseStorage implements IStorage {
     // Delete all task submissions for the child in this family
     await db.delete(taskSubmissions)
       .where(and(
-        eq(taskSubmissions.userId, childId),
+        eq(taskSubmissions.submittedById, childId),
         eq(taskSubmissions.familyId, familyId)
       ));
 
@@ -693,12 +693,10 @@ export class DatabaseStorage implements IStorage {
     // Create a fresh balance record with zero amounts
     await db.insert(balances)
       .values({
-        id: nanoid(),
         userId: childId,
         familyId: familyId,
         accumulated: 0,
         pending: 0,
-        createdAt: new Date(),
         updatedAt: new Date()
       });
   }
